@@ -14,6 +14,27 @@ has schema => (
   required => 1,
 );
 
+has deferred_action_handler => (
+  is   => 'ro',
+  lazy => 1
+  reader  => '_deferred_action_handler',
+  clearer => '_clear_deferred_action_handler',
+  builder => 'build_deferred_action_handler',
+  predicate => '_has_deferred_action_handler',
+);
+
+sub build_deferred_action_handler { ... }
+
+sub txn_do ($self, $code) {
+  delete local $self->{_deferred_action_handler};
+  my $rv = $self->schema->txn_do($code);
+
+  $self->deferred_action_handler->execute
+    if $self->deferred_action_handler;
+
+  return $rv;
+}
+
 has processor => (
   is   => 'ro',
   does => 'Ix::Processor',

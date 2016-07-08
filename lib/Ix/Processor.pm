@@ -85,7 +85,7 @@ has _dbic_handlers => (
 sub process_request ($self, $ctx, $calls) {
   my @results;
 
-  $ctx->schema->txn_do(sub {
+  $ctx->txn_do(sub {
     CALL: for my $call (@$calls) {
       # On one hand, I am tempted to disallow ambiguous cids here.  On the other
       # hand, the spec does not. -- rjbs, 2016-02-11

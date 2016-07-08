@@ -367,7 +367,7 @@ sub ix_create ($self, $ctx, $to_create) {
     }
 
     my $row = eval {
-      $ctx->schema->txn_do(sub {
+      $ctx->txn_do(sub {
         $self->create(\%rec);
       });
     };
@@ -545,7 +545,7 @@ sub ix_update ($self, $ctx, $to_update) {
     }
 
     my $ok = eval {
-      $ctx->schema->txn_do(sub {
+      $ctx->txn_do(sub {
         $row->update({
           %$user_prop,
           modSeqChanged => $next_state,
@@ -599,7 +599,7 @@ sub ix_destroy ($self, $ctx, $to_destroy) {
     }
 
     my $ok = eval {
-      $ctx->schema->txn_do(sub {
+      $ctx->txn_do(sub {
         $row->update({
           modSeqChanged => $next_state,
           dateDeleted   => Ix::DateTime->now,
