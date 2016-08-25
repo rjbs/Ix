@@ -33,6 +33,7 @@ sub ix_get ($self, $ctx, $arg = {}) {
   $arg = $rclass->ix_preprocess_get_arg($ctx, $arg)
     if $rclass->can('ix_preprocess_get_arg');
 
+  # XXX Chokes if $arg isn't actually a hashref. -- alh, 2016-08-25
   my $ids   = $arg->{ids};
   my $since = $arg->{sinceState};
 

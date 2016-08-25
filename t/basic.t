@@ -10,6 +10,8 @@ use Bakesale::Schema;
 use Test::Deep;
 use Test::More;
 
+use DateTime;
+
 my ($app, $jmap_tester) = Bakesale::Test->new_test_app_and_tester;
 \my %dataset = Bakesale::Test->load_trivial_dataset($app->processor->schema_connection);
 
@@ -965,6 +967,58 @@ subtest "supplied created values changed" => sub {
     },
     "Ix returns fields modified behind the scenes on create",
   ) or diag explain $created;
+};
+
+subtest "virtual properties come back in create" => sub {
+  my $old = DateTime->now->subtract(hours => 1);
+  my $old_str = bless($old, 'Ix::DateTime')->as_string;
+  my $recent = DateTime->now->subtract(minutes => 5);
+  my $recent_str = bless($recent, 'Ix::DateTime')->as_string;
+
+  my $res = $jmap_tester->request([
+    [ setCookies => {
+      create => {
+        fresh => { type => 'oatmeal', baked_at => $old_str, },
+        stale => { type => 'oatmeal', baked_at => $recent_str, },
+      },
+    } ],
+  ]);
+
+  my $created = $jmap_tester->strip_json_types(
+    $res->paragraph(0)->single('cookiesSet')->as_set,
+  );
+
+  my @created_ids = $created->created_ids;
+
+  cmp_deeply(
+    $created->created,
+    {
+      fresh => superhashof({ still_warm => bool(1) }),
+      stale => superhashof({ still_warm => bool(0) }),
+    },
+    "Ix returns virtual fields on create",
+  ) or diag explain $res;
+
+  # And they come back on a get
+  $res = $jmap_tester->request([
+    [  getCookies => { ids => \@created_ids  } ]
+  ]);
+
+  diag explain $res;
+
+  my $cookies = $jmap_tester->strip_json_types(
+    $res->single_sentence('cookies')->arguments->{list},
+  );
+
+  cmp_deeply(
+    $cookies,
+    set(
+      superhashof({ still_warm => bool(1) }),
+      superhashof({ still_warm => bool(0) }),
+    ),
+    "Ix returns virtual fields on get",
+  );
+      
 };
 
 done_testing;

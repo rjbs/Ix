@@ -16,6 +16,7 @@ __PACKAGE__->ix_add_properties(
   baked_at   => { data_type => 'datetime', is_optional => 1 },
   expires_at => { data_type => 'datetime', is_optional => 0 },
   delicious  => { data_type => 'string', is_optional => 0 },
+  still_warm => { data_type => 'boolean', is_virtual => 1 },
 );
 
 __PACKAGE__->set_primary_key('id');
@@ -28,6 +29,22 @@ sub ix_default_properties {
     expires_at => Ix::DateTime->now->add(days => 3),
     delicious => 'yes',
   };
+}
+
+sub ix_get_extra_search($self, $ctx, $arg = {}) {
+  my ($cond, $attr) = $self->SUPER::ix_get_extra_search($ctx);
+
+  if (grep {; $_ eq 'still_warm' } $arg->{properties}->@*) {
+    $attr->{'+columns'} ||= {};
+    # Note: Virtual data that can change behind the scenes like this
+    #       is bad. Don't do this. (Any changes in data should cause a
+    #       change in recorded state)
+    $attr->{'+columns'}{still_warm} = \q{
+      baked_at > now() - '30m'::interval
+    };
+  }
+
+  return ($cond, $attr);
 }
 
 sub ix_set_check ($self, $ctx, $arg) {
