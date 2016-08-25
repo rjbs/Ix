@@ -179,6 +179,7 @@ my @created_ids;
           yellow => { type => 'shortbread', baked_at => undef },
           gold   => { type => 'anzac' },
           blue   => {},
+          orange => { type => 'apple', pretty_delicious => 1 },
         },
         update => {
           $dataset{cookies}{1} => { type => 'half-eaten tim-tam' },
@@ -205,6 +206,10 @@ my @created_ids;
             blue   => superhashof({
               type => 'invalidProperties',
               propertyErrors => { type => 'no value given for required field' }
+            }),
+            orange => superhashof({
+              type => 'invalidProperties',
+              propertyErrors => { pretty_delicious => "unknown property" },
             }),
           },
           updated => [ $dataset{cookies}{1} ],
