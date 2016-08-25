@@ -274,6 +274,55 @@ sub ix_purge ($self, $ctx) {
   return;
 }
 
+sub _ix_topo_keys ($self, $to_create, $prop_info, $type_key) {
+  # ix_self_xref_properties might be useful to compute during finalization if
+  # this somehow becomes a bottleneck; unlikely, I guess... -- rjbs, 2016-08-25
+  return unless my @cr_ids = keys $to_create->%*;
+
+  my @x_props = grep {; ($prop_info->{$_}{xref_to} // '') eq $type_key }
+                keys $prop_info->%*;
+  return \@cr_ids unless @x_props;
+
+  my @sorted;
+  my %ready; # overkill?  O(N!) to O(N), but hashing more expensive than ==
+  my %waiting;
+
+  for my $id (@cr_ids) {
+    my $rec = $to_create->{$id};
+    my @dep_on = map {; (($rec->{$_}//'') =~ /^#/) ? ($rec->{$_} =~ s/^#//r) : () } @x_props;
+
+    if (@dep_on) {
+      $waiting{$id} = [ @dep_on ];
+    } else {
+      push @sorted, $id;
+      $ready{$id} = 1;
+    }
+  }
+
+  my @loops;
+  my $todo = %waiting;
+  QUEUE: while (keys %waiting) {
+    for my $id (keys %waiting) {
+      my @dep = $waiting{$id}->@*;
+      if (@dep == grep {; $ready{$_} } @dep) {
+        delete $waiting{$id};
+        push @sorted, $id;
+        $ready{$id} = 1;
+      }
+    }
+
+    # No progress.  There is a loop.
+    if ($todo == %waiting) {
+      @loops = keys %waiting;
+      last QUEUE;
+    }
+
+    $todo = %waiting;
+  }
+
+  return( \@sorted, \@loops );
+}
+
 sub ix_create ($self, $ctx, $to_create) {
   my $datasetId = $ctx->datasetId;
 
@@ -290,11 +339,15 @@ sub ix_create ($self, $ctx, $to_create) {
 
   my $prop_info = $rclass->ix_property_info;
 
-  # TODO: sort these in dependency order, so if item A references item B, B is
-  # created first -- rjbs, 2016-05-10
-  my @keys = keys $to_create->%*;
+  my ($todo, $loops) = $self->_ix_topo_keys($to_create, $prop_info, $type_key);
 
-  TO_CREATE: for my $id (@keys) {
+  for my $loop (@$loops) {
+    $result{$_} = $ctx->error(invalidProperties => {
+      description => "cross-reference loop"
+    });
+  }
+
+  TO_CREATE: for my $id (@$todo) {
 
     my %default_properties = (
       # XXX: This surely must require a lot more customizability; pass in
