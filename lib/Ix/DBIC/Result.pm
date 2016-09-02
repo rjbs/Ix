@@ -136,12 +136,38 @@ sub ix_finalize ($class) {
     Carp::confess("tried to finalize $class a second time");
   }
 
+  # column name => $rclass->ix_type_key
+  my %xrefs;
+
+  for my $r ($class->relationships) {
+    my $r_info = $class->relationship_info($r);
+
+    my $acc = $r_info->{attrs}{accessor} || '';
+
+    if ($acc eq 'single') {
+      # belongs_to, figure out what our xref should be
+      for my $fk (keys $r_info->{attrs}{fk_columns}->%*) {
+        # XXX - source or class?
+        $xrefs{$fk} = $r_info->{class}->ix_type_key
+          if $r_info->{class}->can('ix_type_key');
+      }
+
+    } elsif ($acc eq 'multi') {
+      # has_*, make sure destroyed records don't show up
+      $r_info->{cond}->{'foreign.isActive'} = 'self.isActive';
+    }
+  }
+
   my $prop_info = $class->ix_property_info;
 
   for my $name (keys %$prop_info) {
     my $info = $prop_info->{$name};
 
     $info->{validator} //= $DEFAULT_VALIDATOR{ $info->{data_type} };
+
+    if (my $ix_type = $xrefs{$name}) {
+      $info->{xref_to} = $ix_type;
+    }
   }
 }
 

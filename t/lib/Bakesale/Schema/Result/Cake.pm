@@ -21,7 +21,6 @@ __PACKAGE__->ix_add_properties(
     data_type    => 'string',
     db_data_type => 'integer',
     validator    => idstr(),
-    xref_to      => 'cakeRecipes'
   },
 );
 
