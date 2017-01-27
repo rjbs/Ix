@@ -53,6 +53,8 @@ package Bakesale::Test {
 
     $user1 = $user_rs->single({ id => $user1->id });
 
+    $user1->ix_create_base_state;
+
     return ($user1->id, $user1->accountId);
   }
 
@@ -70,6 +72,8 @@ package Bakesale::Test {
 
     $user1 = $user_rs->single({ id => $user1->id });
 
+    $user1->ix_create_base_state;
+
     my $user2 = $user_rs->create({
       accountId => \q{pseudo_encrypt(nextval('key_seed_seq')::int)},
       username  => 'neilj',
@@ -79,6 +83,8 @@ package Bakesale::Test {
 
     $user2 = $user_rs->single({ id => $user2->id });
 
+    $user2->ix_create_base_state;
+
     my $user3 = $user_rs->create({
       accountId => \q{pseudo_encrypt(nextval('key_seed_seq')::int)},
       username  => 'alh',
@@ -87,6 +93,8 @@ package Bakesale::Test {
     });
 
     $user3 = $user_rs->single({ id => $user3->id });
+
+    $user3->ix_create_base_state;
 
     my $a1 = $user1->accountId;
     my $a2 = $user2->accountId;
@@ -117,12 +125,21 @@ package Bakesale::Test {
       },
     ]);
 
-    $schema->resultset('State')->populate([
-      { accountId => $a1, type => 'cookies', lowestModSeq => 1, highestModSeq => 8 },
-      { accountId => $a2, type => 'cookies', lowestModSeq => 1, highestModSeq => 1 },
-      { accountId => $a1, type => 'users',   lowestModSeq => 1, highestModSeq => 1 },
-      { accountId => $a2, type => 'users',   lowestModSeq => 1, highestModSeq => 1 },
-    ]);
+    $schema->resultset('State')->search({
+      accountId => $a1, type => 'cookies',
+    })->update({ highestModSeq => 8 });
+
+    $schema->resultset('State')->search({
+      accountId => $a2, type => 'cookies',
+    })->update({ highestModSeq => 1 });
+
+    $schema->resultset('State')->search({
+      accountId => $a1, type => 'users',
+    })->update({ highestModSeq => 1 });
+
+    $schema->resultset('State')->search({
+      accountId => $a1, type => 'users',
+    })->update({ highestModSeq => 1 });
 
     return {
       accounts => { rjbs => $a1, neilj => $a2, alh => $user3->accountId, },
