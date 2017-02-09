@@ -1412,7 +1412,16 @@ subtest "non-ASCII data" => sub {
 subtest "ix_created test" => sub {
   # Creating a row can internally create another row and give us a result
   # (This tests ix_created hook) XXX - Test ix_updated/ix_destroyed hooks
+
+  # Get topper state
   my $res = $jmap_tester->request([
+    [
+      getCakeToppers => { ids => [] }
+    ],
+  ]);
+  ok(defined(my $state = $res->sentence(0)->arguments->{state}), 'got state');
+
+  $res = $jmap_tester->request([
     [
       setCakes => {
         create => {
@@ -1449,7 +1458,7 @@ subtest "ix_created test" => sub {
             },
           ),
           notFound => ignore(),
-          state => 2,
+          state => $state + 1,
         }), "my id"
       ],
     ],
@@ -1461,6 +1470,8 @@ subtest "ix_created test" => sub {
 
   ok($cstate, 'got cake state');
   ok($tstate, 'got cake topper state');
+
+  is($tstate, $state + 1, 'state from update and tstate from get agree');
 
   # But can they throw sensible-ish errors?
   local @ENV{qw(NO_CAKE_TOPPERS QUIET_BAKESALE)} = (1, 1);
