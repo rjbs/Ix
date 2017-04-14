@@ -162,7 +162,7 @@ sub to_app ($self) {
       $env->{'psgi.errors'}->print("exception was reported: $_\n")
     }
 
-    if (blessed($res)) { 
+    if (blessed($res)) {
       for my $k (keys %HEADER) {
         $res->header($k => $HEADER{$k});
       }
