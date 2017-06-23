@@ -1,19 +1,22 @@
 language: perl
 perl:
   - 5.24
+services:
+  - postgresql
 before_install:
   - git clone git://github.com/rjbs/travis-perl-helpers -b release-testing ~/travis-perl-helpers
   - source ~/travis-perl-helpers/init
   - build-perl
   - perl -V
 
-  - git clone git://github.com/rjbs/Ix
-  - cd Ix
-  - build-dist
+  - git clone git://github.com/rjbs/Ix ~/Ix
+  - cd ~/Ix
+  - ~/travis-perl-helpers/bin/build-dist ~/build-ix
+  - cd ~/build-ix
   - perl Makefile.PL
   - make install
-  - cd ..
 
+  - build-dist
   - cd $BUILD_DIR
 script:
   - perl Makefile.PL
