@@ -8,15 +8,6 @@ package Bakesale::Test {
 
   use Bakesale::TestInstance;
 
-  sub new_test_app_and_tester ($self) {
-    require JMAP::Tester;
-    require LWP::Protocol::PSGI;
-
-    my $ti = Bakesale::TestInstance->new;
-
-    return ($ti->app, $ti->tester);
-  }
-
   sub load_single_user ($self, $schema) {
     my $user_rs = $schema->resultset('User');
 

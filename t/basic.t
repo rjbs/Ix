@@ -1,7 +1,7 @@
-use 5.20.0;
+use 5.24.0;
 use warnings;
 use utf8;
-use experimental qw(lexical_subs signatures postderef refaliasing);
+use experimental qw(lexical_subs signatures refaliasing);
 
 use lib 't/lib';
 
@@ -17,13 +17,14 @@ use Ix::Util qw(ix_new_id);
 
 my $no_updates = any({}, undef);
 
-my ($app, $jmap_tester) = Bakesale::Test->new_test_app_and_tester;
-\my %account = Bakesale::Test->load_trivial_account($app->processor->schema_connection);
+my $ti = Bakesale::TestInstance->new;
 
-$jmap_tester->_set_cookie('bakesaleUserId', $account{users}{rjbs});
+\my %account = Bakesale::Test->load_trivial_account($ti->schema);
+
+my $jmap_tester = $ti->authenticated_tester($account{users}{rjbs});
 
 {
-  $app->clear_transaction_log;
+  $ti->app->clear_transaction_log;
 
   my $res = $jmap_tester->request([
     [ pieTypes => { tasty => 1 } ],
@@ -49,7 +50,7 @@ $jmap_tester->_set_cookie('bakesaleUserId', $account{users}{rjbs});
     "third call response group: one item, as expected",
   );
 
-  my @xacts = $app->drain_transaction_log;
+  my @xacts = $ti->app->drain_transaction_log;
   is(@xacts, 1, "we log transactions (at least when testing)");
 }
 
@@ -1715,7 +1716,7 @@ subtest "deleted entites in get*Updates calls" => sub {
 };
 
 subtest "additional request handling" => sub {
-  $app->clear_transaction_log;
+  $ti->app->clear_transaction_log;
 
   my $uri = $jmap_tester->api_uri;
   $uri =~ s/jmap$/secret/;
@@ -1726,7 +1727,7 @@ subtest "additional request handling" => sub {
     "we can hijack request handling",
   );
 
-  my @xacts = $app->drain_transaction_log;
+  my @xacts = $ti->app->drain_transaction_log;
   is(@xacts, 1, "we log the /secret transaction");
 
   is(
@@ -1769,7 +1770,7 @@ subtest "dateDestroyed has timezone" => sub {
   is_deeply([ $set2->destroyed_ids ], [ $id ], "we destroy the item");
 
   # Verify
-  $app->processor->schema_connection->storage->dbh_do(
+  $ti->schema->storage->dbh_do(
     sub {
       my ($storage, $dbh) = @_;
 
@@ -2033,7 +2034,7 @@ subtest "property canonicalization" => sub {
 
 subtest "lock timeout" => sub {
   # Lock our collection and trigger our timeout
-  my $schema = $app->processor->schema_connection;
+  my $schema = $ti->schema;
 
   my $res = $schema->txn_do(sub {
     my $lock = $schema->resultset('State')->search(

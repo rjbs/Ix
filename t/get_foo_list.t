@@ -15,10 +15,11 @@ use Test::More;
 use Test::Abortable 'subtest';
 use Unicode::Normalize;
 
-my ($app, $jmap_tester) = Bakesale::Test->new_test_app_and_tester;
-\my %account = Bakesale::Test->load_trivial_account($app->processor->schema_connection);
+my $ti = Bakesale::TestInstance->new;
 
-$jmap_tester->_set_cookie('bakesaleUserId', $account{users}{rjbs});
+\my %account = Bakesale::Test->load_trivial_account($ti->schema);
+
+my $jmap_tester = $ti->authenticated_tester($account{users}{rjbs});
 
 # Create some recipes
 my $res = $jmap_tester->request([

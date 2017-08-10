@@ -11,7 +11,8 @@ use Bakesale::Schema;
 use Test::More;
 use Ix::Util qw(ix_new_id);
 
-my ($app, $jmap_tester) = Bakesale::Test->new_test_app_and_tester;
+my $ti = Bakesale::TestInstance->new;
+my $jmap_tester = $ti->tester;
 
 {
   # No user cookie, should get 410 response

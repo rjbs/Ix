@@ -16,10 +16,11 @@ use Unicode::Normalize;
 use Data::Dumper;
 use Process::Status;
 
-my ($app, $jmap_tester) = Bakesale::Test->new_test_app_and_tester;
-\my %account = Bakesale::Test->load_trivial_account($app->processor->schema_connection);
+my $ti = Bakesale::TestInstance->new;
 
-$jmap_tester->_set_cookie('bakesaleUserId', $account{users}{rjbs});
+\my %account = Bakesale::Test->load_trivial_account($ti->schema);
+
+my $jmap_tester = $ti->authenticated_tester($account{users}{rjbs});
 
 # For a different account
 my $jmap_tester2 = JMAP::Tester->new({
@@ -116,7 +117,7 @@ ok(defined($state), 'got new state');
 # should succeed and the state should be bumped twice in the one account.
 
 my $lock = with_child {
-  my $schema = $app->processor->schema_connection;
+  my $schema = $ti->schema;
 
   $schema->txn_do(sub {
     $schema->storage->dbh->do("LOCK TABLE states IN ACCESS EXCLUSIVE MODE");

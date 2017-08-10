@@ -13,16 +13,17 @@ use Test::Deep;
 use Test::Deep::JType;
 use Test::More;
 
-my ($app, $jmap_tester) = Bakesale::Test->new_test_app_and_tester;
-\my %account = Bakesale::Test->load_trivial_account($app->processor->schema_connection);
+my $ti = Bakesale::TestInstance->new;
 
-$jmap_tester->_set_cookie('bakesaleUserId', $account{users}{rjbs});
+\my %account = Bakesale::Test->load_trivial_account($ti->schema);
+
+my $jmap_tester = $ti->authenticated_tester($account{users}{rjbs});
 
 my $log_data;
 open(my $log_fh, '>', \$log_data);
 
-$app->access_log_fh($log_fh);
-$app->access_log_enabled(1);
+$ti->app->access_log_fh($log_fh);
+$ti->app->access_log_enabled(1);
 
 my $elapsed_re = re('\d+\.\d+|\d+e-\d+');
 

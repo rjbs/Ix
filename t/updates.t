@@ -12,13 +12,15 @@ use Test::Deep::JType;
 use Test::More;
 use Test::Abortable;
 
-my ($app, $jmap_tester) = Bakesale::Test->new_test_app_and_tester;
-my ($admin_id, $accountId) = Bakesale::Test->load_single_user($app->processor->schema_connection);
-$jmap_tester->_set_cookie('bakesaleUserId', $admin_id);
+my $ti = Bakesale::TestInstance->new;
+
+my ($admin_id, $accountId) = Bakesale::Test->load_single_user($ti->schema);
+
+my $jmap_tester = $ti->authenticated_tester($admin_id);
 
 # Set our base state to 1-1 so we can ensure we're told to resync if we
 # pass in a sinceState lower than that (0-1 or 1-0 for example).
-my $updated = $app->processor->schema_connection->resultset('State')->search({
+my $updated = $ti->schema->resultset('State')->search({
   accountId => $accountId,
   type      => [ qw(cakes cakeRecipes) ],
 })->update({

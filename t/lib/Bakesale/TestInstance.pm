@@ -7,6 +7,7 @@ use experimental qw(lexical_subs signatures);
 use Bakesale;
 use Bakesale::Schema;
 use JMAP::Tester;
+use LWP::Protocol::PSGI;
 use Test::PgMonger;
 
 my %TEST_DBS;
@@ -95,6 +96,13 @@ sub tester ($self) {
   my $jmap_tester = JMAP::Tester->new({
     api_uri => $self->api_uri,
   });
+}
+
+sub authenticated_tester ($self, $user_id) {
+  my $tester = $self->tester;
+  $tester->_set_cookie('bakesaleUserId', $user_id);
+
+  return $tester;
 }
 
 1;
