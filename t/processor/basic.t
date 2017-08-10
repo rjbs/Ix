@@ -13,7 +13,8 @@ use Try::Tiny;
 
 my $no_updates = any({}, undef);
 
-my $Bakesale = Bakesale->new;
+my $ti = Bakesale::TestInstance->new;
+my $Bakesale = $ti->processor;
 \my %account = Bakesale::Test->load_trivial_account($Bakesale->schema_connection);
 
 my $ctx = $Bakesale->get_context({

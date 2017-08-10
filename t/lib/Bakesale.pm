@@ -6,43 +6,15 @@ package Bakesale::Test {
   use File::Temp qw(tempdir);
   use Ix::Util qw(ix_new_id);
 
+  use Bakesale::TestInstance;
+
   sub new_test_app_and_tester ($self) {
     require JMAP::Tester;
     require LWP::Protocol::PSGI;
 
-    my $app = Bakesale::App->new({
-      transaction_log_enabled => 1,
-    });
+    my $ti = Bakesale::TestInstance->new;
 
-    state $n;
-    $n++;
-    LWP::Protocol::PSGI->register($app->to_app, host => 'bakesale.local:' . $n);
-    my $jmap_tester = JMAP::Tester->new({
-      api_uri => "http://bakesale.local:$n/jmap",
-    });
-
-    return ($app, $jmap_tester);
-  }
-
-  my %TEST_DBS;
-  END { $_->cleanup for $TEST_DBS{$$}->@*; }
-
-  sub test_schema_connect_info {
-    require Test::PgMonger;
-    my $db = Test::PgMonger->new->create_database({
-      extra_sql_statements => [
-        "CREATE EXTENSION IF NOT EXISTS citext;",
-      ],
-    });
-    push $TEST_DBS{$$}->@*, $db;
-
-    my $schema = Bakesale->new({
-      connect_info => [ $db->connect_info ],
-    })->schema_connection;
-
-    $schema->deploy;
-
-    return [ $db->connect_info ];
+    return ($ti->app, $ti->tester);
   }
 
   sub load_single_user ($self, $schema) {
@@ -175,12 +147,9 @@ package Bakesale {
 
   sub connect_info;
   has connect_info => (
-    lazy    => 1,
-    traits  => [ 'Array' ],
-    handles => { connect_info => 'elements' },
-    default => sub {
-      Bakesale::Test->test_schema_connect_info;
-    },
+    traits    => [ 'Array' ],
+    handles   => { connect_info => 'elements' },
+    required  => 1,
   );
 
   sub database_defaults {

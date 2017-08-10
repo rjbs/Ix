@@ -127,11 +127,12 @@ for my $line (@lines) {
 
   open(my $log_fh, '>', \$log_data);
 
+  my $ti = Bakesale::TestInstance->new({
+    bakesale_args => { behind_proxy => 1 },
+  });
+
   my $app = Bakesale::App->new({
-    transaction_log_enabled => 1,
-    processor => Bakesale->new({
-      behind_proxy => 1,
-    }),
+    processor => $ti->processor,
   });
 
   $app->access_log_fh($log_fh);
