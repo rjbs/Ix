@@ -6,8 +6,6 @@ package Bakesale::Test {
   use File::Temp qw(tempdir);
   use Ix::Util qw(ix_new_id);
 
-  use Bakesale::TestInstance;
-
   sub load_single_user ($self, $schema) {
     my $user_rs = $schema->resultset('User');
 

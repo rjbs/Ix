@@ -5,9 +5,7 @@ use experimental qw(lexical_subs signatures postderef refaliasing);
 
 use lib 't/lib';
 
-use Bakesale;
-use Bakesale::App;
-use Bakesale::Schema;
+use Bakesale::TestInstance;
 use JSON::MaybeXS ();
 use Test::Deep;
 use Test::Deep::JType;

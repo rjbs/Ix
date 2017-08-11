@@ -5,8 +5,8 @@ use Moose;
 use experimental qw(lexical_subs signatures);
 
 use Bakesale;
+use Bakesale::App;
 use Bakesale::Crunk;
-use Bakesale::Schema;
 use JMAP::Tester;
 use LWP::Protocol::PSGI;
 use Test::PgMonger;

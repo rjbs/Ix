@@ -4,8 +4,7 @@ use experimental qw(signatures postderef refaliasing);
 
 use lib 't/lib';
 
-use Bakesale;
-use Bakesale::Schema;
+use Bakesale::TestInstance;
 use Test::Deep;
 use Test::More;
 use Safe::Isa;

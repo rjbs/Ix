@@ -4,9 +4,7 @@ use experimental qw(signatures postderef);
 
 use lib 't/lib';
 
-use Bakesale;
-use Bakesale::App;
-use Bakesale::Schema;
+use Bakesale::TestInstance;
 use Test::Deep;
 use Test::Deep::JType;
 use Test::More;
