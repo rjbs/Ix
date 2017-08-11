@@ -450,37 +450,47 @@ subtest "invalid sinceState" => sub {
 }
 
 subtest "passing in a boolean" => sub {
-  my $cr = $jmap_tester->crunk
-                       ->collection('cakeRecipes')
-                       ->create({
-                         type          => 'cake boat',
-                         avg_review    => 0,
-                         is_delicious  => \0,
-                       });
+  my $cr_col = $jmap_tester->crunk->collection('cakeRecipes');
+  my $recipe = $cr_col->create({
+    type          => 'cake boat',
+    avg_review    => 0,
+    is_delicious  => \0,
+  });
 
   jcmp_deeply(
-    $cr,
+    { $recipe->properties },
     { id => ignore(), sku => re(qr/\A[0-9]{5}\z/), },
     "made an object with a boolean property value",
-  ) or note(explain($cr));
+  ) or note(explain($recipe));
 
-  my $id = $cr->{id};
+  my $id = $recipe->id;
 
-  my $get = $jmap_tester->request([
-    [ getCakeRecipes => { ids => [ "$id" ] } ]
-  ]);
+  {
+    my $get = $jmap_tester->request([
+      [ getCakeRecipes => { ids => [ "$id" ] } ]
+    ]);
 
-  cmp_deeply(
-    $jmap_tester->strip_json_types( $get->as_pairs ),
-    [
+    cmp_deeply(
+      $jmap_tester->strip_json_types( $get->as_pairs ),
       [
-        cakeRecipes => superhashof({
-          list => [ superhashof({ id => "$id", is_delicious => bool(0) }) ],
-        }),
+        [
+          cakeRecipes => superhashof({
+            list => [ superhashof({ id => "$id", is_delicious => bool(0) }) ],
+          }),
+        ],
       ],
-    ],
-    "created with the right truthiness",
-  ) or note(explain($get->as_pairs));
+      "created with the right truthiness",
+    ) or note(explain($get->as_pairs));
+  }
+
+  {
+    my $get = $cr_col->retrieve($recipe->id);
+    jcmp_deeply(
+      { $get->properties },
+      superhashof({ id => "$id", is_delicious => bool(0) }),
+      "fetch back via the collection",
+    );
+  }
 
   # Can't use something that looks like a boolean
   my $res = $jmap_tester->request([
