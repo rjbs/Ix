@@ -61,7 +61,7 @@ package Ix::Crunk::Util {
 
       my $col = Ix::Crunk::Collection->new({
         crunk => $self,
-        collection_name => $name,
+        entity_class => $class,
       });
 
       $col_col->{$name} = $col;
