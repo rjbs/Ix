@@ -5,6 +5,7 @@ use Moose;
 use experimental qw(lexical_subs signatures);
 
 use Bakesale;
+use Bakesale::Crunk;
 use Bakesale::Schema;
 use JMAP::Tester;
 use LWP::Protocol::PSGI;
@@ -92,8 +93,28 @@ has api_uri => (
   },
 );
 
+package Bakesale::JMAP::Tester {
+  use Moose;
+  use experimental qw(lexical_subs signatures);
+  extends 'JMAP::Tester';
+
+  has crunk => (
+    is    => 'ro',
+    lazy  => 1,
+    default => sub ($tester, @) {
+      Scalar::Util::weaken($tester);
+      Bakesale::Crunk->new({
+        request_callback => sub {
+          my ($self, $calls) = @_;
+          return $tester->request($calls);
+        }
+      });
+    }
+  );
+}
+
 sub tester ($self) {
-  my $jmap_tester = JMAP::Tester->new({
+  my $jmap_tester = Bakesale::JMAP::Tester->new({
     api_uri => $self->api_uri,
   });
 }
@@ -103,6 +124,26 @@ sub authenticated_tester ($self, $user_id) {
   $tester->_set_cookie('bakesaleUserId', $user_id);
 
   return $tester;
+}
+
+sub system_crunk ($self) {
+  my $ctx = $self->processor->get_system_context({ schema => $self->schema });
+
+  Bakesale::Crunk->new({
+    request_callback => sub {
+      my ($self, $input_calls) = @_;
+
+      my @calls = @$input_calls;
+      my $id = 'a';
+      $_->[2] = $id++ unless @$_ > 2;
+
+      my $res = $ctx->process_request(\@calls);
+
+      return JMAP::Tester::Response->new({
+        struct => $res,
+      });
+    }
+  });
 }
 
 1;

@@ -452,35 +452,21 @@ subtest "invalid sinceState" => sub {
 }
 
 subtest "passing in a boolean" => sub {
-  my $res = $jmap_tester->request([
-    [
-      setCakeRecipes => {
-        create => {
-          boat => {
-            type          => 'cake boat',
-            avg_review    => 0,
-            is_delicious  => \0,
-          }
-        },
-      },
-    ],
-  ]);
+  my $cr = $jmap_tester->crunk
+                       ->collection('cakeRecipes')
+                       ->create({
+                         type          => 'cake boat',
+                         avg_review    => 0,
+                         is_delicious  => \0,
+                       });
 
-  cmp_deeply(
-    $jmap_tester->strip_json_types( $res->as_pairs ),
-    [
-      [
-        cakeRecipesSet => superhashof({
-          created => {
-            boat => { id => ignore(), sku => re(qr/\A[0-9]{5}\z/), },
-          }
-        }),
-      ],
-    ],
+  jcmp_deeply(
+    $cr,
+    { id => ignore(), sku => re(qr/\A[0-9]{5}\z/), },
     "made an object with a boolean property value",
-  ) or note(explain($res->as_pairs));
+  ) or note(explain($cr));
 
-  my $id = $res->single_sentence->as_set->created_id('boat');
+  my $id = $cr->{id};
 
   my $get = $jmap_tester->request([
     [ getCakeRecipes => { ids => [ "$id" ] } ]
@@ -496,10 +482,10 @@ subtest "passing in a boolean" => sub {
       ],
     ],
     "created with the right truthiness",
-  ) or note(explain($res->as_pairs));
+  ) or note(explain($get->as_pairs));
 
   # Can't use something that looks like a boolean
-  $res = $jmap_tester->request([
+  my $res = $jmap_tester->request([
     [
       setCakeRecipes => {
         create => {
