@@ -538,6 +538,4 @@ subtest "getFooUpdates - ix_get_updates_check" => sub {
   }
 };
 
-$app->_shutdown;
-
 done_testing;

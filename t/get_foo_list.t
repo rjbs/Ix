@@ -1496,6 +1496,4 @@ subtest "we do not promote undef sort or filter" => sub {
   }
 };
 
-$app->_shutdown;
-
 done_testing;

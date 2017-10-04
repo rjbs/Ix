@@ -15,6 +15,10 @@ my %TEST_DBS;
 
 END { $_->cleanup for $TEST_DBS{$$}->@*; }
 
+sub DEMOLISH {
+  $_[0]->app->_shutdown if $_[0]->_has_app;
+}
+
 state $Monger = Test::PgMonger->new;
 
 has bakesale_args => (
@@ -71,7 +75,8 @@ has schema => (
 has app => (
   is => 'ro',
   lazy => 1,
-  default => sub ($self, @) {
+  predicate => '_has_app',
+  default   => sub ($self, @) {
     return Bakesale::App->new({
       transaction_log_enabled => 1,
       processor => $self->processor,
