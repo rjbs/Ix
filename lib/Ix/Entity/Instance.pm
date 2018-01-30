@@ -1,5 +1,5 @@
 use v5.24.0;
-package Ix::Crunk::Entity;
+package Ix::Entity::Instance;
 
 use MooseX::Role::Parameterized;
 use experimental qw(lexical_subs signatures);

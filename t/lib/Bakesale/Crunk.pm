@@ -5,9 +5,9 @@ package Bakesale::Crunk;
 # for property lists! -- rjbs, 2017-08-10
 use Bakesale::Schema;
 
-require Ix::Crunk;
+require Ix::Entity::CollectionLibrary;
 
-my $cc = Ix::Crunk::CC->_cc_for_me(qw(
+my $cc = Ix::Entity::CollectionLibrary->_cc_for_me(qw(
   Cake CakeRecipe CakeTopper Cookie User
 ));
 

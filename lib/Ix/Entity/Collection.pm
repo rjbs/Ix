@@ -1,5 +1,5 @@
 use v5.24.0;
-package Ix::Crunk::Collection;
+package Ix::Entity::Collection;
 
 use Moose;
 use experimental qw(lexical_subs signatures);

@@ -111,25 +111,27 @@ sub authenticated_tester ($self, $user_id) {
   return $tester;
 }
 
+package Bakesale::Agent {
+  sub for_ctx ($class, $ctx) {
+    return bless { ctx => $ctx }, $class;
+  }
+
+  sub request ($self, $input_calls) {
+    my @calls = @$input_calls;
+    my $id = 'a';
+    $_->[2] = $id++ unless @$_ > 2;
+
+    my $res = $self->{ctx}->process_request(\@calls);
+
+    return JMAP::Tester::Response->new({
+      struct => $res,
+    });
+  }
+}
+
 sub system_agent ($self) {
   my $ctx = $self->processor->get_system_context({ schema => $self->schema });
-
-  require Ix::Crunk::Agent;
-  Ix::Crunk::Agent->new({
-    request_callback => sub {
-      my ($self, $input_calls) = @_;
-
-      my @calls = @$input_calls;
-      my $id = 'a';
-      $_->[2] = $id++ unless @$_ > 2;
-
-      my $res = $ctx->process_request(\@calls);
-
-      return JMAP::Tester::Response->new({
-        struct => $res,
-      });
-    }
-  });
+  Bakesale::Agent->for_ctx($ctx);
 }
 
 1;
