@@ -1,4 +1,4 @@
-package Bakesale::Crunk::Entity::CakeTopper;
+package Bakesale::Entity::CakeTopper;
 
 use Moose;
 use experimental qw(lexical_subs signatures);

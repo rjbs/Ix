@@ -450,7 +450,7 @@ subtest "invalid sinceState" => sub {
 }
 
 subtest "passing in a boolean" => sub {
-  my $cr_col = Bakesale::Crunk->collection('cakeRecipes');
+  my $cr_col = Bakesale::CollectionLibrary->collection('cakeRecipes');
 
   my $recipe = $cr_col->create(
     {

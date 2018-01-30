@@ -1,4 +1,4 @@
-package Bakesale::Crunk::Entity::CakeRecipe;
+package Bakesale::Entity::CakeRecipe;
 
 use Moose;
 use experimental qw(lexical_subs signatures);

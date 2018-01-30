@@ -6,7 +6,7 @@ use experimental qw(lexical_subs signatures);
 
 use Bakesale;
 use Bakesale::App;
-use Bakesale::Crunk;
+use Bakesale::CollectionLibrary;
 use JMAP::Tester;
 use LWP::Protocol::PSGI;
 use Test::PgMonger;

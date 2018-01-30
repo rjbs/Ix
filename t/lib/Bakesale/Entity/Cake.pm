@@ -1,10 +1,10 @@
-package Bakesale::Crunk::Entity::User;
+package Bakesale::Entity::Cake;
 
 use Moose;
 use experimental qw(lexical_subs signatures);
 
 with 'Ix::Entity::Instance', {
-  rclass => 'Bakesale::Schema::Result::User',
+  rclass => 'Bakesale::Schema::Result::Cake',
 };
 
 1;

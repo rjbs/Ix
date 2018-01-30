@@ -12,17 +12,16 @@ has collections => (
   required  => 1,
 );
 
-sub _cc_for_me ($self, @names) {
+sub _cc_for_me ($self, $arg) {
   require Module::Runtime;
-  my $pkg = caller;
 
   my $col_for = {};
   my $cc = $self->new({
     collections => $col_for,
   });
 
-  for my $name (@names) {
-    my $class = join q{::}, $pkg, 'Entity', $name;
+  for my $name ($arg->{collection_names}->@*) {
+    my $class = join q{::}, $arg->{class_prefix}, $name;
     Module::Runtime::require_module($class);
 
     my $col_name = $class->collection_name;
