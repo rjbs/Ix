@@ -8,8 +8,11 @@ use experimental qw(signatures);
 require Ix::Entity::Collection;
 
 has collections => (
-  is        => 'ro',
   required  => 1,
+  traits    => [ 'Hash' ],
+  handles   => {
+    get_collection => 'get',
+  }
 );
 
 sub _cc_for_me ($self, $arg) {
@@ -44,7 +47,7 @@ sub _cc_for_me ($self, $arg) {
 }
 
 sub collection ($self, $name) {
-  my $col = $self->collections->{ $name };
+  my $col = $self->get_collection($name);
   return $col if $col;
   Carp::confess("no collection for $name");
 }
