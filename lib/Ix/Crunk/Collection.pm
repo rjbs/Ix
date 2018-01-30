@@ -4,16 +4,18 @@ package Ix::Crunk::Collection;
 use Moose;
 use experimental qw(lexical_subs signatures);
 
-has crunk => (is => 'ro', required => 1);
 has entity_class => (is => 'ro', required => 1);
 
-sub create ($self, $properties) {
+sub create ($self, $properties, $agent) {
   my $col_name = $self->entity_class->collection_name;
 
-  my $res = $self->crunk->request([
+  my $res = $agent->request([
     [ "set\u$col_name" => { create => { item => $properties } } ],
   ]);
 
+  # XXX I think we sometimes may expect a create to return extra sentences
+  # about side-effects.  We should consider whether instead of single_sentence,
+  # we should be using sentence_named. -- rjbs, 2018-01-29
   my $res_arg = $res->single_sentence("${col_name}Set")->arguments;
 
   # TODO This all needs to be re-done in terms of create_batch from
@@ -25,6 +27,7 @@ sub create ($self, $properties) {
 
   if ($created->{item}) {
     return $self->entity_class->new({
+      agent      => $agent,
       collection => $self,
       accountId  => undef, # XXX
       properties => $created->{item},
@@ -34,10 +37,10 @@ sub create ($self, $properties) {
   Carp::confess("not created and not not created!");
 }
 
-sub retrieve ($self, $id) {
+sub retrieve ($self, $id, $agent) {
   my $col_name = $self->entity_class->collection_name;
 
-  my $res = $self->crunk->request([
+  my $res = $agent->request([
     [ "get\u$col_name" => { ids => [ $id ] } ],
   ]);
 
@@ -50,6 +53,7 @@ sub retrieve ($self, $id) {
 
   if ($got && @$got) {
     return $self->entity_class->new({
+      agent      => $agent,
       collection => $self,
       accountId  => undef, # XXX
       properties => $got->[0],

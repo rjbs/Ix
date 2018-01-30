@@ -450,12 +450,16 @@ subtest "invalid sinceState" => sub {
 }
 
 subtest "passing in a boolean" => sub {
-  my $cr_col = $jmap_tester->crunk->collection('cakeRecipes');
-  my $recipe = $cr_col->create({
-    type          => 'cake boat',
-    avg_review    => 0,
-    is_delicious  => \0,
-  });
+  my $cr_col = Bakesale::Crunk->collection('cakeRecipes');
+
+  my $recipe = $cr_col->create(
+    {
+      type          => 'cake boat',
+      avg_review    => 0,
+      is_delicious  => \0,
+    },
+    $jmap_tester,
+  );
 
   jcmp_deeply(
     { $recipe->properties },
@@ -484,7 +488,7 @@ subtest "passing in a boolean" => sub {
   }
 
   {
-    my $get = $cr_col->retrieve($recipe->id);
+    my $get = $cr_col->retrieve($recipe->id, $jmap_tester);
     jcmp_deeply(
       { $get->properties },
       superhashof({ id => "$id", is_delicious => bool(0) }),
@@ -2209,7 +2213,7 @@ subtest "is_immutable" => sub {
   }
 
   {
-    my $ctx = $app->processor->get_system_context;
+    my $ctx = $ti->app->processor->get_system_context;
 
     my $sys_res = $ctx->process_request([
       [
@@ -2427,7 +2431,5 @@ subtest "result references" => sub {
     "simple echo response",
   ) or diag explain($res->as_stripped_triples);
 };
-
-$app->_shutdown;
 
 done_testing;
