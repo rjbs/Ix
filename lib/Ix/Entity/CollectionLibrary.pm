@@ -15,11 +15,11 @@ has collections => (
   }
 );
 
-sub _cc_for_me ($self, $arg) {
+sub _build_library ($self, $arg) {
   require Module::Runtime;
 
   my $col_for = {};
-  my $cc = $self->new({
+  my $library = $self->new({
     collections => $col_for,
   });
 
@@ -32,18 +32,12 @@ sub _cc_for_me ($self, $arg) {
       if $col_for->{$col_name};
 
     $col_for->{ $col_name } = Ix::Entity::Collection->new({
-      # We will need a weak reference from collections back to the
-      # collection collection for letting a Thing create a Subthing.  But not
-      # yet. But that's why we have this convoluted thing where we've made
-      # the object and are operating directly on a reference inside it.
-      # Later, we'll need to have the object here to pass to the collection
-      # constructor, or we'll maybe call ->register_collection or something.
-      # -- rjbs, 2018-01-29
+      library      => $library,
       entity_class => $class,
     });
   }
 
-  return $cc;
+  return $library;
 }
 
 sub collection ($self, $name) {

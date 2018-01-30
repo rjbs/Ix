@@ -6,6 +6,11 @@ use experimental qw(lexical_subs signatures);
 
 has entity_class => (is => 'ro', required => 1);
 
+# Probably this could be optional if we want to support single collection stuff
+# for ... some reason.  But without that reason, might as well make it
+# required. -- rjbs, 2018-01-30
+has library => (is => 'ro', weak_ref => 1, required => 1);
+
 sub create ($self, $properties, $agent) {
   my $col_name = $self->entity_class->collection_name;
 

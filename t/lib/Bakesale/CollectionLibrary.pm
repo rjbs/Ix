@@ -7,7 +7,7 @@ use Bakesale::Schema;
 
 require Ix::Entity::CollectionLibrary;
 
-my $cc = Ix::Entity::CollectionLibrary->_cc_for_me({
+my $cc = Ix::Entity::CollectionLibrary->_build_library({
   class_prefix     => 'Bakesale::Entity',
   collection_names => [ qw( Cake CakeRecipe CakeTopper Cookie User) ],
 });
