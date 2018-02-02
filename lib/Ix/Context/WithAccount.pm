@@ -117,10 +117,16 @@ sub txn_do ($self, $code) {
   }
 
   return @rv;
-};
+}
 
 sub process_request ($self, $calls) {
   $self->processor->process_request($self, $calls);
+}
+
+sub resultset ($self, $rs_name) {
+  $self->schema->resultset($rs_name)->search({
+    accountId => $self->accountId,
+  });
 }
 
 sub with_account ($self, $account_type, $accountId) {
