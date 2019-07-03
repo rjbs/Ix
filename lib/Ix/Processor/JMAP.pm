@@ -108,8 +108,10 @@ sub _sanity_check_calls ($self, $calls, $arg) {
   return;
 }
 
-sub expand_backrefs ($self, $ctx, $arg) {
-  return unless my @backref_keys = map {; s/^#// ? $_ : () } keys %$arg;
+sub expand_backrefs ($self, $ctx, $arg, $meta_arg = {}) {
+  return unless my @backref_keys = map  {; s/^#// ? $_ : () } keys %$arg;
+
+  my %skip_cid = map {; $_ => 1 } ($meta_arg->{skip_cids} // [])->@*;
 
   my sub throw_ref_error ($desc) {
     Ix::Error::Generic->new({
@@ -127,7 +129,7 @@ sub expand_backrefs ($self, $ctx, $arg) {
 
   my @sentences = $ctx->results_so_far->sentences;
 
-  for my $key (@backref_keys) {
+  KEY: for my $key (@backref_keys) {
     my $ref  = delete $arg->{"#$key"};
 
     unless ( _HASH0($ref)
@@ -135,6 +137,10 @@ sub expand_backrefs ($self, $ctx, $arg) {
     ) {
       throw_ref_error("malformed ResultReference");
     }
+
+    # With multicalls, we may sometimes need to do partial expansions.  This
+    # lets us expand only some parts of the present backrefs.
+    next if $skip_cid{ $ref->{resultOf} };
 
     my ($sentence) = grep {; $_->client_id eq $ref->{resultOf} } @sentences;
 
