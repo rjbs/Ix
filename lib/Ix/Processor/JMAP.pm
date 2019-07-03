@@ -130,7 +130,7 @@ sub expand_backrefs ($self, $ctx, $arg, $meta_arg = {}) {
   my @sentences = $ctx->results_so_far->sentences;
 
   KEY: for my $key (@backref_keys) {
-    my $ref  = delete $arg->{"#$key"};
+    my $ref = $arg->{"#$key"};
 
     unless ( _HASH0($ref)
           && 3 == grep {; defined $ref->{$_} } qw(resultOf name path)
@@ -141,6 +141,8 @@ sub expand_backrefs ($self, $ctx, $arg, $meta_arg = {}) {
     # With multicalls, we may sometimes need to do partial expansions.  This
     # lets us expand only some parts of the present backrefs.
     next if $skip_cid{ $ref->{resultOf} };
+
+    delete $arg->{"#$key"};
 
     my ($sentence) = grep {; $_->client_id eq $ref->{resultOf} } @sentences;
 
