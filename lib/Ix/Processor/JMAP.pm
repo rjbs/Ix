@@ -267,10 +267,14 @@ sub handle_calls ($self, $ctx, $calls, $arg = {}) {
 
     # XXX - We still want to record call info for multicalls!
     #       -- alh, 2019-06-26
-    $ctx->record_call_info($call->[0], {
+    my $ident = $call->$_DOES('Ix::Multicall')
+              ? $call->call_ident
+              : $call->[0];
+
+    $ctx->record_call_info($ident, {
       elapsed_seconds => tv_interval($call_start, $call_end),
       was_known_call  => $was_known_call,
-    }) unless $call->$_DOES('Ix::Multicall');
+    });
   }
 
   return $sc;

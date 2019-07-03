@@ -427,6 +427,8 @@ package Bakesale::Cupcake::Combiner {
   use experimental qw(lexical_subs signatures postderef);
   with 'Ix::Multicall';
 
+  sub call_ident { 'Cake/multiset' }
+
   has calls => (
     is => 'ro',
     isa => 'ArrayRef',
