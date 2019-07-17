@@ -87,7 +87,6 @@ sub _sanity_check_calls ($self, $calls, $arg) {
   # We should, in the future, add a bunch of error checking up front and reject
   # badly-formed requests.  For now, this is a placeholder, except for its
   # client id fixups. -- rjbs, 2018-01-05
-
   my %saw_cid;
 
   # Won't happen.  Won't happen.  Won't happen... -- rjbs, 2018-01-05
@@ -109,42 +108,50 @@ sub _sanity_check_calls ($self, $calls, $arg) {
   return;
 }
 
-sub expand_backrefs ($self, $ctx, $arg) {
-  return unless my @backref_keys = map {; s/^#// ? $_ : () } keys %$arg;
+sub expand_backrefs ($self, $ctx, $arg, $meta_arg = {}) {
+  return unless my @backref_keys = map  {; s/^#// ? $_ : () } keys %$arg;
 
-  my sub ref_error ($desc) {
+  my %skip_cid = map {; $_ => 1 } ($meta_arg->{skip_cids} // [])->@*;
+
+  my sub throw_ref_error ($desc) {
     Ix::Error::Generic->new({
       error_type  => 'resultReference',
       properties  => {
         description => $desc,
       },
-    });
+    })->throw;
   }
 
   if (my @duplicated = grep {; exists $arg->{$_} } @backref_keys) {
-    return ref_error( "arguments present as both ResultReference and not: "
-                    .  join(q{, }, @duplicated));
+    throw_ref_error( "arguments present as both ResultReference and not: "
+                   .  join(q{, }, @duplicated));
   }
 
   my @sentences = $ctx->results_so_far->sentences;
 
-  for my $key (@backref_keys) {
-    my $ref  = delete $arg->{"#$key"};
+  KEY: for my $key (@backref_keys) {
+    my $ref = $arg->{"#$key"};
 
     unless ( _HASH0($ref)
           && 3 == grep {; defined $ref->{$_} } qw(resultOf name path)
     ) {
-      return ref_error("malformed ResultReference");
+      throw_ref_error("malformed ResultReference");
     }
+
+    # With multicalls, we may sometimes need to do partial expansions.  This
+    # lets us expand only some parts of the present backrefs.
+    next if $skip_cid{ $ref->{resultOf} };
+
+    delete $arg->{"#$key"};
 
     my ($sentence) = grep {; $_->client_id eq $ref->{resultOf} } @sentences;
 
     unless ($sentence) {
-      return ref_error("no result for client id $ref->{resultOf}");
+      throw_ref_error("no result for client id $ref->{resultOf}");
     }
 
     unless ($sentence->name eq $ref->{name}) {
-      return ref_error(
+      throw_ref_error(
         "first result for client id $ref->{resultOf} is not $ref->{name} but "
         . $sentence->name,
       );
@@ -156,7 +163,7 @@ sub expand_backrefs ($self, $ctx, $arg) {
     );
 
     if ($error) {
-      return ref_error("error with path: $error");
+      throw_ref_error("error with path: $error");
     }
 
     $arg->{$key} = ref $result ? Storable::dclone($result) : $result;
@@ -170,6 +177,8 @@ sub handle_calls ($self, $ctx, $calls, $arg = {}) {
     add_missing_client_ids => ! $arg->{no_implicit_client_ids}
   });
 
+  $self->optimize_calls($ctx, $calls);
+
   my $call_start;
   my $was_known_call;
 
@@ -179,6 +188,18 @@ sub handle_calls ($self, $ctx, $calls, $arg = {}) {
   CALL: for my $call (@$calls) {
     $call_start = [ gettimeofday ];
     $was_known_call = 1;
+
+    if ($call->$_DOES('Ix::Multicall')) {
+      # Returns [ [ $item, $cid ], ... ]
+      my $pairs = $call->execute($ctx);
+
+      Carp::confess("non-Ix::Result in result list")
+        if grep {; ! $_->[0]->$_DOES('Ix::Result') } @$pairs;
+
+      $sc->add_items($pairs);
+
+      next CALL;
+    }
 
     # On one hand, I am tempted to disallow ambiguous cids here.  On the other
     # hand, the spec does not. -- rjbs, 2016-02-11
@@ -198,40 +219,34 @@ sub handle_calls ($self, $ctx, $calls, $arg = {}) {
       next CALL;
     }
 
-    my @rv = $self->expand_backrefs($ctx, $arg);
+    my @rv = try {
+      $self->expand_backrefs($ctx, $arg);
 
-    unless (@rv) {
-      @rv = try {
-        unless ($ctx->may_call($method, $arg)) {
-          return $ctx->error(forbidden => {
-            description => "you are not authorized to make this call",
-          });
-        }
+      unless ($ctx->may_call($method, $arg)) {
+        return $ctx->error(forbidden => {
+          description => "you are not authorized to make this call",
+        });
+      }
 
-        $self->$handler($ctx, $arg);
-      } catch {
-        if ($_->$_DOES('Ix::Error')) {
-          return $_;
-        } else {
-          warn $_;
-          die $_;
-        }
-      };
-    }
+      $self->$handler($ctx, $arg);
+    } catch {
+      if ($_->$_DOES('Ix::Error')) {
+        return $_;
+      } else {
+        warn $_;
+        die $_;
+      }
+    };
 
     RV: for my $i (0 .. $#rv) {
-      local $_ = $rv[$i];
-      my $item
-        = $_->$_DOES('Ix::Result')
-        ? [ $_, $cid ]
-        : [
-            Ix::Error::Generic->new({ error_type  => 'garbledResponse' }),
-            $cid,
-          ];
+      my $item = $rv[$i];
 
-      $sc->add_items([ $item ]);
+      Carp::confess("non-Ix::Result in result list: $item")
+        unless $item->$_DOES('Ix::Result');
 
-      if ($item->[0]->does('Ix::Error') && $i < $#rv) {
+      $sc->add_items([[ $item, $cid ]]);
+
+      if ($item->does('Ix::Error') && $i < $#rv) {
         # In this branch, we have a potential return value like:
         # (
         #   [ valid => ... ],
@@ -250,7 +265,13 @@ sub handle_calls ($self, $ctx, $calls, $arg = {}) {
   } continue {
     my $call_end = [ gettimeofday ];
 
-    $ctx->record_call_info($call->[0], {
+    # XXX - We still want to record call info for multicalls!
+    #       -- alh, 2019-06-26
+    my $ident = $call->$_DOES('Ix::Multicall')
+              ? $call->call_ident
+              : $call->[0];
+
+    $ctx->record_call_info($ident, {
       elapsed_seconds => tv_interval($call_start, $call_end),
       was_known_call  => $was_known_call,
     });
@@ -258,6 +279,8 @@ sub handle_calls ($self, $ctx, $calls, $arg = {}) {
 
   return $sc;
 }
+
+sub optimize_calls {}
 
 sub process_request ($self, $ctx, $calls) {
   my $sc = $self->handle_calls($ctx, $calls);
