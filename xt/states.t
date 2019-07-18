@@ -41,7 +41,7 @@ for my $sig (@SIGNALS) {
   $SIG{$sig} = sub { $signaled++; };
 }
 
-sub with_child ($code) :prototype(&) {
+sub with_child :prototype(&) ($code) {
   my $sig = shift @SIGNALS;
 
   my $res = fork;
