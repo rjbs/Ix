@@ -251,7 +251,7 @@ $res = $jmap_tester->request([
 my $new_state = $res->sentence(0)->arguments->{newState};
 is($new_state, $state + 2, "state bumped twice");
 
-my @changed = $res->sentence(0)->arguments->{changed}->@*;
+my @changed = $res->sentence(0)->arguments->{created}->@*;
 is (@changed, 2, 'two cookies created')
   or diag explain $res->as_stripped_triples;
 
@@ -265,7 +265,7 @@ $res = $jmap_tester->request([
 $new_state = $res->sentence(0)->arguments->{newState};
 is($new_state, $state + 2, "state bumped twice");
 
-@changed = $res->sentence(0)->arguments->{changed}->@*;
+@changed = $res->sentence(0)->arguments->{created}->@*;
 is (@changed, 1, 'one cookie created')
   or diag explain $res->as_stripped_triples;
 
