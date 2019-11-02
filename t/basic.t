@@ -1330,7 +1330,7 @@ subtest "virtual properties in create" => sub {
   ]);
 
   my $got = $jmap_tester->strip_json_types(
-    $res->paragraph(0)->single('User/get')->as_set->arguments->{list}->[0]
+    $res->paragraph(0)->single('User/get')->arguments->{list}->[0]
   );
 
   cmp_deeply(
