@@ -1,6 +1,7 @@
 use 5.22.0;
 use warnings;
 package Ix::Validators;
+# ABSTRACT: validate your input
 
 use JSON::MaybeXS ();
 use Params::Util qw(_ARRAY0);
@@ -22,7 +23,55 @@ use Sub::Exporter -setup => [ qw(
   email domain idstr state
 ) ];
 
+=head1 SYNOPSIS
+
+    use Ix::Validators qw(string email integer);
+
+    if (my $err = string({ nonempty => 1 })->('')) {
+      die "Your string is bad: $err";
+    }
+
+    if (my $err = email()->("bad.email")) {
+      die "Your email is bad: $err";
+    }
+
+    my $validator = integer(-10, 10);
+    if (my $err = $validator->(42)) {
+      die "Your number is bad: $err";
+    }
+
+All of the validators return code references, which are called to validate
+some input. Everything here is exported by L<Sub::Exporter>.
+
+=cut
+
 my $PRINTABLE = qr{[\pL\pN\pP\pS]};
+
+=func string($arg)
+
+The given value must be a string.  You can pass a hashref with some boolean
+options:
+
+=begin :list
+
+= ascii
+disallow non-ASCII characters
+
+= nonempty
+disallow empty strings
+
+= oneline
+disallow vertical whitespace
+
+= trimmed
+disallow leading and/or trailing whitespace
+
+= printable
+allow only letters, numbers, punctuation, and whitespace
+
+=end :list
+
+=cut
 
 sub string ($input_arg = {}) {
   my %arg = (
@@ -67,11 +116,33 @@ sub string ($input_arg = {}) {
   };
 }
 
+=func simplestr()
+
+An alias for C<< string({ oneline => 1 }) >>.
+
+=func nonemptystr()
+
+An alias for C<< string({ nonempty => 1 }) >>.
+
+=func freetext()
+
+An alias for C<< string() >>.
+
+=cut
+
 BEGIN {
   *simplestr   = sub { string({ oneline  => 1 }) };
   *nonemptystr = sub { string({ nonempty => 1 }) };
   *freetext    = sub { string() };
 }
+
+=func array_of($validator)
+
+The given value must be an array of some kind of other validator. For the
+validator C<< my $val = array_of(integer(-10, 10)) >>, for example,
+C<[1, 2, -2]> is valid, but C<5> and C<[1, 2, -42]> are not.
+
+=cut
 
 sub array_of ($validator) {
   return sub ($x, @) {
@@ -84,6 +155,52 @@ sub array_of ($validator) {
     return "invalid values in array";
   };
 }
+
+=func record($arg)
+
+The given value must be a hashref, with optional additional validation.
+C<$arg> is a hashref, which can have three keys:
+
+=begin :list
+
+= required
+
+Either an arrayref or hashref of keys that are required. If you provide an
+arrayref, the keys must simply be present in the validated value. If you
+provide a hashref, the values should be other validators.
+
+= optional
+
+The same kind of structure as C<required>, but these are, well, optional.
+
+= throw
+
+If false, errors are simply returned from the validator; if true, errors are wrapped in
+L<Ix::Error::Generic> objects and thrown as exceptions.
+
+=end :list
+
+This is probably easiest to understand by way of an example:
+
+    state $check = record({
+      required => [ qw(needful)  ],
+      optional => {
+        whatever => integer(-1, 1),
+        subrec   => record({
+          required => { color => enum([ qw(red green blue) ]) },
+          optional => [ 'saturation' ],
+        }),
+      },
+      throw    => 1,
+    });
+
+To validate, a hashref B<must> have the C<needful> key, but the value can be
+anything at all. It B<may> have a C<whatever> key, but if it does, it must be
+between -1 and 1. If there's a C<subrec> key, the subrecord must have a
+C<color> key which is either red, green, or blue, and may have a C<saturation>
+key. If validation fails for this record, it will be thrown as an exception.
+
+=cut
 
 sub record ($arg) {
   # { required => [...], optional => [...], throw => bool }
@@ -136,6 +253,11 @@ sub record ($arg) {
   }
 }
 
+=func boolean
+
+The given value must be a JSON boolean (like JSON::true or JSON::false).
+
+=cut
 
 sub boolean {
   return sub ($x, @) {
@@ -143,6 +265,19 @@ sub boolean {
     return;
   };
 }
+
+=func email
+
+The given value must be a valid email address. This does not do full RFC-style
+validation, but should be good enough for most general cases. Notably, it does
+I<not> check for a valid top-level domain.
+
+=func domain
+
+The given value must plausibly look like a valid domain name. This does no DNS
+lookups, but is useful for initial validation.
+
+=cut
 
 {
   my $tld_re =
@@ -219,6 +354,14 @@ sub boolean {
   }
 }
 
+=func enum($values)
+
+The given value must match one of the values given in the arrayref C<$values>.
+For the validator C<< my $val = enum([qw(red green)]) >>, C<< $val->('red') >>
+passes and C<< $val->('blue') >> fails.
+
+=cut
+
 sub enum ($values) {
   my %is_valid = map {; $_ => 1 } @$values;
   return sub ($x, @) {
@@ -226,6 +369,13 @@ sub enum ($values) {
     return;
   };
 }
+
+=func integer($min, $max)
+
+The given value must be an integer between C<$min> and C<$max> (inclusive).
+C<$min> defaults to -Inf, and C<$max> to Inf.
+
+=cut
 
 sub integer ($min = '-Inf', $max = 'Inf') {
   return sub ($x, @) {
@@ -236,6 +386,13 @@ sub integer ($min = '-Inf', $max = 'Inf') {
   };
 }
 
+=func state($min, $max)
+
+The given value must be an integer between C<$min> and C<$max>, which default to
+-2**31 and 2**31, respectively.
+
+=cut
+
 sub state ($min = -2**31, $max = 2**31-1) {
   return sub ($x, @) {
     return "not an integer" unless $x =~ /\A[-+]?(?:[0-9]|[1-9][0-9]*)\z/;
@@ -244,6 +401,12 @@ sub state ($min = -2**31, $max = 2**31-1) {
     return;
   };
 }
+
+=func idstr
+
+The given value must be a GUID string (case-insensitive).
+
+=cut
 
 sub idstr {
   return sub ($x, @) {
@@ -255,3 +418,4 @@ sub idstr {
 }
 
 1;
+
