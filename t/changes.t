@@ -521,7 +521,7 @@ subtest "updated null and updated Object" => sub {
   }
 };
 
-subtest "Foo/changes - ix_get_updates_check" => sub {
+subtest "Foo/changes - ix_changes_check" => sub {
   {
     my $res = $jmap_tester->request([
       [

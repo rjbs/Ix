@@ -126,7 +126,7 @@ sub ix_get ($self, $ctx, $arg = {}) {
   });
 }
 
-sub ix_get_updates ($self, $ctx, $arg = {}) {
+sub ix_changes ($self, $ctx, $arg = {}) {
   my $rclass = $self->_ix_rclass;
   $ctx = $ctx->with_account($rclass->ix_account_type, $arg->{accountId});
 
@@ -143,7 +143,7 @@ sub ix_get_updates ($self, $ctx, $arg = {}) {
       return $ctx->error(invalidArguments => { description => "invalid maxChanges" });
     }
 
-    if (my $error = $rclass->ix_get_updates_check($ctx, $arg)) {
+    if (my $error = $rclass->ix_changes_check($ctx, $arg)) {
       return $error;
     }
 
@@ -994,7 +994,7 @@ sub ix_set ($self, $ctx, $arg = {}) {
   });
 }
 
-sub ix_get_list ($self, $ctx, $arg = {}) {
+sub ix_query ($self, $ctx, $arg = {}) {
   my $rclass = $self->_ix_rclass;
   $ctx = $ctx->with_account($rclass->ix_account_type, $arg->{accountId});
 
@@ -1007,10 +1007,10 @@ sub ix_get_list ($self, $ctx, $arg = {}) {
 
     my $limit = $arg->{limit} // 500;
 
-    my $search = $self->_get_list_search_args($ctx, $arg);
+    my $search = $self->_query_search_args($ctx, $arg);
     $search->{filter}{'me.isActive'} = 1;
 
-    if (my $error = $rclass->ix_get_list_check($ctx, $arg, $search)) {
+    if (my $error = $rclass->ix_query_check($ctx, $arg, $search)) {
       return $error;
     }
 
@@ -1056,7 +1056,7 @@ sub ix_get_list ($self, $ctx, $arg = {}) {
   });
 }
 
-sub ix_get_list_updates ($self, $ctx, $arg = {}) {
+sub ix_query_changes ($self, $ctx, $arg = {}) {
   my $rclass = $self->_ix_rclass;
   $ctx = $ctx->with_account($rclass->ix_account_type, $arg->{accountId});
 
@@ -1090,9 +1090,9 @@ sub ix_get_list_updates ($self, $ctx, $arg = {}) {
     my $orig_filter = $arg->{filter};
     my $orig_sort   = $arg->{sort};
 
-    my $search = $self->_get_list_search_args($ctx, $arg);
+    my $search = $self->_query_search_args($ctx, $arg);
 
-    if (my $error = $rclass->ix_get_list_updates_check($ctx, $arg, $search)) {
+    if (my $error = $rclass->ix_query_changes_check($ctx, $arg, $search)) {
       return $error;
     }
 
@@ -1126,7 +1126,7 @@ sub ix_get_list_updates ($self, $ctx, $arg = {}) {
     # XXX This exposes the fact that we said "immutable" but really meant
     # "can't be set by client."  Some properties were marked immutable but
     # could actually be updated by the server. -- rjbs, 2017-07-11
-    my $filter_map = $rclass->ix_get_list_filter_map;
+    my $filter_map = $rclass->ix_query_filter_map;
     my $prop_info = $rclass->ix_property_info;
     my %is_user_prop = map {; $_ => 1 } $rclass->ix_client_update_ok_properties($ctx);
 
@@ -1235,7 +1235,7 @@ sub ix_get_list_updates ($self, $ctx, $arg = {}) {
   });
 }
 
-sub _get_list_search_args ($self, $ctx, $arg) {
+sub _query_search_args ($self, $ctx, $arg) {
   my $rclass = $self->_ix_rclass;
 
   my %search;
@@ -1244,7 +1244,7 @@ sub _get_list_search_args ($self, $ctx, $arg) {
 
   my %bad_filter;
 
-  my $filter_map = $rclass->ix_get_list_filter_map;
+  my $filter_map = $rclass->ix_query_filter_map;
 
   my @conds;
 
@@ -1282,7 +1282,7 @@ sub _get_list_search_args ($self, $ctx, $arg) {
   my @sort;
   my @bad_sort;
 
-  my $sort_map = $rclass->ix_get_list_sort_map;
+  my $sort_map = $rclass->ix_query_sort_map;
 
   SORT: for my $sort ($arg->{sort}->@*) {
     my @bad = grep {; $_ !~ /\A(?:property|isAscending|collation)\z/ } keys %$sort;
@@ -1332,8 +1332,8 @@ sub _get_list_search_args ($self, $ctx, $arg) {
 
   $search{sort} = { order_by => \@sort };
   $search{join} = {
-    ( $rclass->ix_get_list_joins
-      ? ( join => [ $rclass->ix_get_list_joins ] )
+    ( $rclass->ix_query_joins
+      ? ( join => [ $rclass->ix_query_joins ] )
       : ()
     ),
   };

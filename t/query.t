@@ -70,7 +70,7 @@ ok($secret2_recipe_id, 'created a marble recipe');
       queryState => 0,
       total      => 0,
     }),
-    "ix_get_list works with no state rows"
+    "ix_query works with no state rows"
   );
 
   $res = $jmap_tester->request([
@@ -94,7 +94,7 @@ ok($secret2_recipe_id, 'created a marble recipe');
       newQueryState => 0,
       oldQueryState => 0,
     }),
-    "ix_get_list_update works with no state rows"
+    "ix_query_changes works with no state rows"
   );
 }
 
@@ -816,7 +816,7 @@ subtest "custom condition builder" => sub {
       type        => 'invalidArguments',
       description => "That recipe is too secret for you",
     },
-    "Cake/query ix_get_list_check hook works"
+    "Cake/query ix_query_check hook works"
   );
 
   jcmp_deeply(
@@ -825,7 +825,7 @@ subtest "custom condition builder" => sub {
       type        => 'invalidArguments',
       description => "That recipe is way too secret for you",
     },
-    "Cake/queryChanges ix_get_list_updates_check hook works"
+    "Cake/queryChanges ix_query_changes_check hook works"
   );
 }
 

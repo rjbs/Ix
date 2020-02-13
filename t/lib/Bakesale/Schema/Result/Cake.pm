@@ -192,7 +192,7 @@ sub ix_postprocess_set ($self, $ctx, $results) {
   return;
 }
 
-sub ix_get_list_sort_map {
+sub ix_query_sort_map {
   return {
     created     => { },
     id          => { },
@@ -209,7 +209,7 @@ sub ix_get_list_sort_map {
   };
 }
 
-sub ix_get_list_filter_map {
+sub ix_query_filter_map {
   return {
     recipeId    => {
       $ENV{RECIPEID_NOT_REQUIRED} ? () : (required => 1)
@@ -239,13 +239,13 @@ sub ix_get_list_filter_map {
   };
 }
 
-sub ix_get_list_joins {
+sub ix_query_joins {
   return $ENV{RECIPEID_NOT_REQUIRED}
     ? ('topper')
     : ('recipe', 'topper');
 }
 
-sub ix_get_list_check ($self, $ctx, $arg, $search) {
+sub ix_query_check ($self, $ctx, $arg, $search) {
   if (
        exists $arg->{filter}
     && exists $arg->{filter}{recipeId}
@@ -265,7 +265,7 @@ sub ix_get_list_check ($self, $ctx, $arg, $search) {
   return;
 }
 
-sub ix_get_list_updates_check ($self, $ctx, $arg, $search) {
+sub ix_query_changes_check ($self, $ctx, $arg, $search) {
   if (
        exists $arg->{filter}
     && exists $arg->{filter}{recipeId}
@@ -285,7 +285,7 @@ sub ix_get_list_updates_check ($self, $ctx, $arg, $search) {
   return;
 }
 
-sub ix_get_list_enabled { 1 }
+sub ix_query_enabled { 1 }
 
 sub ix_published_method_map {
   return {

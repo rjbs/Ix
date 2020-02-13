@@ -18,7 +18,7 @@ sub ix_account_type { Carp::confess("ix_account_type not implemented") }
 # Checked for in ix_finalize
 # sub ix_type_key { }
 
-sub ix_get_list_enabled {}
+sub ix_query_enabled {}
 sub ix_extra_get_args { }
 
 # Must be specified if the rclass represents a new 'account'
@@ -204,40 +204,40 @@ sub ix_finalize ($class) {
 
   my $prop_info = $class->ix_property_info;
 
-  if ($class->ix_get_list_enabled) {
+  if ($class->ix_query_enabled) {
     my @missing;
 
     for my $method (qw(
-      ix_get_list_check
-      ix_get_list_updates_check
-      ix_get_list_filter_map
-      ix_get_list_sort_map
-      ix_get_list_joins
+      ix_query_check
+      ix_query_changes_check
+      ix_query_filter_map
+      ix_query_sort_map
+      ix_query_joins
     )) {
       push @missing, $method unless $class->can($method);
     }
 
     if (@missing) {
       Carp::confess(
-          "$class - ix_get_list_enabled is true but these required methods are missing: "
+          "$class - ix_query_enabled is true but these required methods are missing: "
         . join(', ', @missing)
       );
     }
 
     # Ensure filters are diffable. If they aren't we'll crash in
-    # ix_get_list_updates when trying to figure out if something has changed.
+    # ix_query_changes when trying to figure out if something has changed.
     # For now, we require that either:
     #
     #  - The filter is a property of the class (it's in by ix_property_info)
     #  - The filter specifies its own custom differ
     #  - The filter contains a relationship ('this.that') and the relationship
-    #    is listed as joinable in ix_get_list_joins. (Note that we do
+    #    is listed as joinable in ix_query_joins. (Note that we do
     #    not verify the columns on the related tables... yet...)
     my @broken;
 
-    my $fmap = $class->ix_get_list_filter_map;
+    my $fmap = $class->ix_query_filter_map;
 
-    my %joins = map { $_ => 1 } $class->ix_get_list_joins;
+    my %joins = map { $_ => 1 } $class->ix_query_joins;
 
     for my $k (keys %$fmap) {
       my $rel_ok;
@@ -259,7 +259,7 @@ sub ix_finalize ($class) {
 
     if (@broken) {
       Carp::confess(
-          "$class - ix_get_list_filter_map has filters that don't match columns or have custom differs: "
+          "$class - ix_query_filter_map has filters that don't match columns or have custom differs: "
         . join(', ', @broken)
       );
     }
@@ -280,7 +280,7 @@ sub ix_get_check              { } # ($self, $ctx, \%arg)
 sub ix_create_check           { } # ($self, $ctx, \%rec)
 sub ix_update_check           { } # ($self, $ctx, $row, \%rec)
 sub ix_destroy_check          { } # ($self, $ctx, $row)
-sub ix_get_updates_check      { } # ($self, $ctx, \%arg)
+sub ix_changes_check          { } # ($self, $ctx, \%arg)
 
 sub ix_create_error  { return; } # ($self, $ctx, \%error)
 sub ix_update_error  { return; } # ($self, $ctx, \%error)

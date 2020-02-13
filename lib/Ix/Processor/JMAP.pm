@@ -62,19 +62,19 @@ has _dbic_handlers => (
       };
 
       $handler{"$key/changes"} = sub ($self, $ctx, $arg = {}) {
-        $ctx->schema->resultset($moniker)->ix_get_updates($ctx, $arg);
+        $ctx->schema->resultset($moniker)->ix_changes($ctx, $arg);
       };
 
       $handler{"$key/set"} = sub ($self, $ctx, $arg) {
         $ctx->schema->resultset($moniker)->ix_set($ctx, $arg);
       };
 
-      if ($rclass->ix_get_list_enabled) {
+      if ($rclass->ix_query_enabled) {
         $handler{"$key/query"} = sub ($self, $ctx, $arg) {
-          $ctx->schema->resultset($moniker)->ix_get_list($ctx, $arg);
+          $ctx->schema->resultset($moniker)->ix_query($ctx, $arg);
         };
         $handler{"$key/queryChanges"} = sub ($self, $ctx, $arg) {
-          $ctx->schema->resultset($moniker)->ix_get_list_updates($ctx, $arg);
+          $ctx->schema->resultset($moniker)->ix_query_changes($ctx, $arg);
         };
       }
     }

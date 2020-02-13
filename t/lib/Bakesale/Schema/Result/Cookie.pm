@@ -116,7 +116,7 @@ sub ix_destroy_check ($self, $ctx, $row) {
   return;
 }
 
-sub ix_get_list_sort_map {
+sub ix_query_sort_map {
   return {
     type        => { },
     baked_at    => { },
@@ -125,7 +125,7 @@ sub ix_get_list_sort_map {
   };
 }
 
-sub ix_get_list_filter_map {
+sub ix_query_filter_map {
   return {
     types => {
       cond_builder => sub ($types) {
@@ -142,9 +142,9 @@ sub ix_get_list_filter_map {
   };
 }
 
-sub ix_get_list_joins { () }
+sub ix_query_joins { () }
 
-sub ix_get_list_check ($self, $ctx, $arg, $search) {
+sub ix_query_check ($self, $ctx, $arg, $search) {
   if ($arg->{filter}{types}) {
     unless ((ref($arg->{filter}{types}) || '') eq 'ARRAY') {
       return $ctx->error(invalidArguments => {
@@ -156,10 +156,10 @@ sub ix_get_list_check ($self, $ctx, $arg, $search) {
   return;
 }
 
-sub ix_get_list_updates_check ($self, $ctx, $arg, $search) {
-  return $self->ix_get_list_check($ctx, $arg, $search);
+sub ix_query_changes_check ($self, $ctx, $arg, $search) {
+  return $self->ix_query_check($ctx, $arg, $search);
 }
 
-sub ix_get_list_enabled { 1 }
+sub ix_query_enabled { 1 }
 
 1;

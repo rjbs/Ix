@@ -123,7 +123,7 @@ sub ix_create_check ($self, $ctx, $arg) {
   return;
 }
 
-sub ix_get_updates_check ($self, $ctx, $arg) {
+sub ix_changes_check ($self, $ctx, $arg) {
   # Not allowed to get more than 5 updates
   if ($arg->{limit} && $arg->{limit} > 5) {
     return $ctx->error(overLimit => {
@@ -165,7 +165,7 @@ sub ix_postprocess_create ($self, $ctx, $rows) {
   return;
 }
 
-sub ix_get_list_sort_map {
+sub ix_query_sort_map {
   return {
     username => { },
     status   => { },
@@ -173,7 +173,7 @@ sub ix_get_list_sort_map {
   };
 }
 
-sub ix_get_list_filter_map {
+sub ix_query_filter_map {
   return {
     username => { },
     status   => { },
@@ -181,11 +181,11 @@ sub ix_get_list_filter_map {
   };
 }
 
-sub ix_get_list_joins { () }
+sub ix_query_joins { () }
 
-sub ix_get_list_check { }
-sub ix_get_list_updates_check { }
+sub ix_query_check { }
+sub ix_query_changes_check { }
 
-sub ix_get_list_enabled { 1 }
+sub ix_query_enabled { 1 }
 
 1;
