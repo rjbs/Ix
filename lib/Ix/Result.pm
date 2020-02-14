@@ -1,13 +1,41 @@
 use 5.20.0;
 package Ix::Result;
+# ABSTRACT: a role representing a JMAP response
 
 use Moose::Role;
 use experimental qw(signatures postderef);
 
 use namespace::autoclean;
 
+=head1 SYNOPSIS
+
+An Ix::Result is a role to represent JMAP responses. It requires two methods:
+
+=begin :list
+
+= result_type
+
+A string that is JMAP method name associated with this result (e.g., 'Foo/set',
+'Foo/changes', 'Core/echo').
+
+= result_arguments
+
+A hashref of arguments in a method response.
+
+=end :list
+
+There are two implementations of this role provided here.
+
+=cut
+
 requires 'result_type';
 requires 'result_arguments';
+
+=head2 Ix::Result::Generic
+
+The most basic implementation you could imagine.
+
+=cut
 
 package Ix::Result::Generic {
 
@@ -27,7 +55,26 @@ package Ix::Result::Generic {
   with 'Ix::Result';
 };
 
+=head2 Ix::Result::FoosSet
+
+This represents a Foo/set method response. It has a few additional accessor
+methods:
+
+=for :list
+* accountId
+* old_state
+* new_state
+* created
+* updated
+* destroyed
+* not_created
+* not_updated
+* not_destroyed
+
+=cut
+
 package Ix::Result::FoosSet {
+# ABSTRACT: a result representing a Foo/set method response.
 
   use Moose;
   use MooseX::StrictConstructor;
