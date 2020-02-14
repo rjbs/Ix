@@ -60,6 +60,12 @@ sub root_context ($self) { $self }
 A handle to an C<Ix::DBIC::Schema> object. This is the normal way of accessing
 the database from inside your application.
 
+=method global_rs
+
+=method global_rs_including_inactive
+
+These are delegates to the methods of the same name in C<< $self->schema >>.
+
 =cut
 
 has schema => (
