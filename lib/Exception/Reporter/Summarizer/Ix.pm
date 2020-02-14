@@ -1,6 +1,7 @@
 use strict;
 use warnings;
 package Exception::Reporter::Summarizer::Ix;
+# ABSTRACT: summarize Ix exceptions with L<Exception::Reporter>
 
 use parent 'Exception::Reporter::Summarizer';
 
