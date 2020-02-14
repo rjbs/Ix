@@ -1,5 +1,6 @@
 use 5.20.0;
 package Ix::Util;
+# ABSTRACT: utility methods for all your Ix needs
 
 use experimental qw(signatures postderef);
 
@@ -19,6 +20,20 @@ use Sub::Exporter -setup => {
   ],
 };
 
+=head1 OVERVIEW
+
+This module exports (via L<Sub::Exporter>) a bunch of utility methods. More
+interestingly, It also includes C<Ix::DateTime>.
+
+=head2 Ix::DateTime
+
+Ix::DateTime is a subclass of L<DateTime> that makes generating JMAP-style
+(RFC 3339) dates easier. It includes a C<to_string> method and overloads
+stringification (and C<TO_JSON>) so that you can just include Ix::DateTime
+objects in places where you need date-time strings without thinking too hard.
+
+=cut
+
 sub _export_ix_id_re {
   my ($class, $value, $data) = @_;
 
@@ -36,7 +51,20 @@ sub _export_ix_id_re {
 my $pg = DateTime::Format::Pg->new();
 my $rfc3339 = DateTime::Format::RFC3339->new();
 
+=func ix_new_id
+
+Return a new string (a guid) suitable for use as an ID.
+
+=cut
+
 sub ix_new_id { lc guid_string() }
+
+=func parsepgdate($str)
+
+Given a datetime string from Postgres, returns an C<Ix::DateTime> object. This
+is parsed with C<DateTime::Format::Pg>.
+
+=cut
 
 sub parsepgdate ($str) {
   my $dt;
@@ -44,6 +72,14 @@ sub parsepgdate ($str) {
 
   bless $dt, 'Ix::DateTime';
 }
+
+=func parsepgdate($str)
+
+Given a JMAP date (like "2017-09-12T12:34:56Z"), returns an C<Ix::DateTime>
+object. This is parsed with L<DateTime::Format::RFC3339>, but the time must be
+in Zulu time with no fractional eseconds.
+
+=cut
 
 sub parsedate ($str) {
   return unless $str =~ /Z\z/; # must be in zulu time
@@ -55,15 +91,22 @@ sub parsedate ($str) {
   bless $dt, 'Ix::DateTime';
 }
 
-# Return true if two scalars differ as potential Ix property values.  This
-# means:
-# * definedness differs
-# * not the same datetime
-# * not the same is-ref (except for date; you can compare date obj + str)
-# * string inequality for non-refs
-# * boolean inequality for bools
-# * not equivalent arrays
-# * otherwise, throw exception
+=func differ($x, $y)
+
+This returns true if two scalars differ as potential Ix property values.
+This means:
+
+=for :list
+
+* definedness differs
+* not the same datetime
+* not the same is-ref (except for date; you can compare date obj + str)
+* string inequality for non-refs
+* boolean inequality for bools
+* not equivalent arrays
+* otherwise, throw exception
+
+=cut
 
 sub differ ($x, $y) {
   return 1 if defined $x xor defined $y;
@@ -93,6 +136,19 @@ sub differ ($x, $y) {
   Carp::croak "can't compare two references with differ";
 }
 
+=func splitquoted($str)
+
+Given a string, this splits into quoted sections, then returns the list.
+Some examples:
+
+    splitquoted(q{foo});                     # ('foo')
+    splitquoted(q{foo bar});                 # ('foo', 'bar')
+    splitquoted(q{"foo bar" baz});           # ('foo bar', 'baz')
+    splitquoted(q{"foo bar" 'baz quux'});    # ('foo bar', 'baz quux')
+    splitquoted(q{"foo \"bar\"" thud'});     # ('foo "bar"', 'thud')
+
+=cut
+
 sub splitquoted ($str) {
   my @found;
 
@@ -112,6 +168,20 @@ sub splitquoted ($str) {
 
   return @found;
 }
+
+=func resolve_modified_jpointer($pointer, $value)
+
+Resolve a JSON Pointer (C<$pointer>) as modified by the JMAP spec (RFC 8620).
+This is just like JSON Pointer (RFC 6901), except it also allows the use of
+C<*> to map through an array. C<$value> is a reference to search.
+
+    my ($result, $error) = resolve_modified_jpointer('/foo', { foo => 'bar' });
+    # $result is 'bar', $error is undef
+
+    my ($result, $error) = resolve_modified_jpointer('/foo', []);
+    # $result is undef, $error has some descriptive string
+
+=cut
 
 # my ($result, $error) = resolve_modified_jpointer($p, $v);
 #   only one of $result or $error will be defined
