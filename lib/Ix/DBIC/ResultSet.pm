@@ -1,6 +1,7 @@
 use 5.20.0;
 use warnings;
 package Ix::DBIC::ResultSet;
+# ABSTRACT: a DBIC ResultSet subclass with all the JMAP smarts
 
 use parent 'DBIx::Class::ResultSet';
 
@@ -18,6 +19,21 @@ use Unicode::Normalize qw(NFC);
 
 use namespace::clean;
 
+=head1 OVERVIEW
+
+This class is where the rubber hits the road.  When you define
+L<Ix::DBIC::Result> rclasses, an L<Ix::Processor::JMAP> object generates
+handlers for all of the standard JMAP methods; those handlers are calls into
+this class. A L<DBIx::Class::ResultSet> is an object which stores a set of
+conditions representing a query; an IX::DBIC::ResultSet is an interface to
+such a set of conditions that are easily accessed over HTTP.
+
+Probably, you won't need to think too much about this class: all of its
+interesting behavior is exposed in the L<Ix::DBIC::Result> classes you write
+for your application.
+
+=cut
+
 # XXX Worth caching?  Probably. -- rjbs, 2016-05-10
 sub _ix_rclass ($self) {
   my $rclass = $self->result_source->result_class;
@@ -28,6 +44,21 @@ sub _ix_rclass ($self) {
 
   return $rclass;
 }
+
+=method ix_get($ctx, $arg)
+
+This method implements 'Foo/get'. C<$arg> is the hashref of arguments provided
+by the client (the second element of a JMAP triple). This method does initial
+argument sanity checking, calls the rclass's hook methods as needed, then does
+the actual selection from the database. It filters out the properties not
+needed (or allowed), then returns an L<Ix::Result> object with the results.
+
+(Note: there are no standard postprocessing hooks for get methods. if you
+I<really> need to modify the results, you can add C<_return_ix_get> in your
+rclass, which is passed a context object, the initial C<$arg>, and the result
+itself.)
+
+=cut
 
 sub ix_get ($self, $ctx, $arg = {}) {
   my $rclass = $self->_ix_rclass;
@@ -125,6 +156,18 @@ sub ix_get ($self, $ctx, $arg = {}) {
     );
   });
 }
+
+=method ix_changes($ctx, $arg)
+
+This method implements 'Foo/changes'. C<$arg> is the hashref of arguments
+provided by the client. After calling any necessary preprocessing hook, this
+method checks the C<sinceState> argument and compares it to the current state
+for this C<ix_type_key> for this account. If there are changes that we can
+calculate, we compute the ids that have been created, updated, or destroyed
+since the given C<sinceState>. In any case, this returns an C<Ix::Result>
+object.
+
+=cut
 
 sub ix_changes ($self, $ctx, $arg = {}) {
   my $rclass = $self->_ix_rclass;
@@ -265,6 +308,16 @@ sub ix_changes ($self, $ctx, $arg = {}) {
   });
 }
 
+=method ix_purge($ctx, $arg)
+
+This method is not called as part of normal JMAP operations. C<ix_destroy>
+does not actually delete rows; this method does. Call it with an accountId key
+in C<$arg>, and it will delete all the rows that were destroyed more than a
+week ago. It also handles the housekeeping for states and bumps the
+lowestModSeq for this type in the states table.
+
+=cut
+
 sub ix_purge ($self, $ctx, $arg = {}) {
   my $rclass = $self->_ix_rclass;
   $ctx = $ctx->with_account($rclass->ix_account_type, $arg->{accountId});
@@ -294,6 +347,18 @@ sub ix_purge ($self, $ctx, $arg = {}) {
     return;
   });
 }
+
+=method ix_create($ctx, $to_create)
+
+This method implements the creation logic for 'Foo/set'; you should not ever
+need to call it independently. It is passed the hashref given to
+Foo/set#create. Like all the other methods in this class, it does error
+checking based on the rclass's property definitions, calls any hooks as
+needed, then actually runs the database creation. It then calls any
+postprocessing hooks, and returns a hashref that is eventually used to
+generate the L<Ix::Result> in response to the Foo/set call.
+
+=cut
 
 sub ix_create ($self, $ctx, $to_create) {
   my $accountId = $ctx->accountId;
@@ -657,6 +722,17 @@ sub _ix_wash_rows ($self, $rows) {
   return;
 }
 
+=method ix_update($ctx, $to_update)
+
+This method implements the update logic for 'Foo/set'; you should not ever
+need to call it independently. Just like C<ix_create>, it is passed the
+hashref given to Foo/set#update, it does necessary error checking, calls any
+hooks, then runs the database update. It calls any postprocessing hooks, and
+returns a hashref that is eventually used to generate the L<Ix::Result> in
+response to the Foo/set call.
+
+=cut
+
 our $UPDATED = 1;
 our $SKIPPED = 2;
 
@@ -799,6 +875,21 @@ sub ix_update ($self, $ctx, $to_update) {
   return \%result;
 }
 
+=method ix_destroy($ctx, $to_destroy)
+
+This method implements the destroy logic for 'Foo/set'; you should not ever
+need to call it independently. It is passed an arrayref of ids to destroy,
+does error checking, calls hooks, then runs the database update. It calls any
+postprocessing hooks, and returns a hashref that is eventually used to
+generate the L<Ix::Result> in response to the Foo/set call.
+
+I<IMPORTANT>: C<ix_destroy> does I<not> delete rows: destroying a record sets
+its C<isActive> property to null, its C<dateDestroyed> property to the current
+timestamp, and updates its C<modSeqChanged>. To delete rows entirely, use
+C<ix_purge>.
+
+=cut
+
 sub ix_destroy ($self, $ctx, $to_destroy) {
   my $accountId = $ctx->accountId;
 
@@ -871,6 +962,14 @@ sub ix_destroy ($self, $ctx, $to_destroy) {
   return \%result;
 }
 
+=method get_collection_lock($ctx)
+
+This is used internally to lock this type for this account for updating. This
+ensures that two simultaneous requests cannot clobber one another. If getting
+a lock fails, this might add an error response to this request.
+
+=cut
+
 sub get_collection_lock ($self, $ctx) {
   my $schema = $ctx->schema;
   my $type_key = $self->_ix_rclass->ix_type_key;
@@ -905,6 +1004,16 @@ sub get_collection_lock ($self, $ctx) {
     })->throw;
   };
 }
+
+=method ix_set($ctx, $arg)
+
+The method implemeents 'Foo/set'. It does some initial error checking and
+validation and calls any pre-set hooks. It then runs, in turn, C<ix_destroy>,
+C<ix_update>, and C<ix_create> to handle the actual database operations for
+the/set call. It calls any postprocessing hooks, then returns a list of
+L<Ix::Result::FoosSet> result objects.
+
+=cut
 
 sub ix_set ($self, $ctx, $arg = {}) {
   my $rclass = $self->_ix_rclass;
@@ -994,6 +1103,16 @@ sub ix_set ($self, $ctx, $arg = {}) {
   });
 }
 
+
+=method ix_query($ctx, $arg)
+
+This method implements 'Foo/query' (note that your rclass must set
+C<ix_query_enabled>). It validates the arguments provided by the client,
+generates a resultset representing the search, and returns an L<Ix::Result>
+object representing the result of the query.
+
+=cut
+
 sub ix_query ($self, $ctx, $arg = {}) {
   my $rclass = $self->_ix_rclass;
   $ctx = $ctx->with_account($rclass->ix_account_type, $arg->{accountId});
@@ -1055,6 +1174,17 @@ sub ix_query ($self, $ctx, $arg = {}) {
     return @res;
   });
 }
+
+=method ix_query_changes($ctx, $arg)
+
+This method implements 'Foo/queryChanges' (note that your rclass must set
+C<ix_query_enabled>). It validates the arguments provided by the client,
+generates a resultset representing the search, and returns an L<Ix::Result>
+object representing the result of the query. (NB: This paragraph is hiding an
+awful lot of complexity in the guts of this method, but you shouldn't need to
+think too much about that!)
+
+=cut
 
 sub ix_query_changes ($self, $ctx, $arg = {}) {
   my $rclass = $self->_ix_rclass;
