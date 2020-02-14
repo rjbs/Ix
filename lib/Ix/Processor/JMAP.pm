@@ -1,5 +1,6 @@
 use 5.20.0;
 package Ix::Processor::JMAP;
+# ABSTRACT: do stuff with JMAP requests
 
 use Moose::Role;
 use experimental qw(lexical_subs signatures postderef);
@@ -15,6 +16,27 @@ use namespace::autoclean;
 use Ix::JMAP::SentenceCollection;
 
 with 'Ix::Processor';
+
+=head1 OVERVIEW
+
+This is a Moose role designed to make JMAP processors (the kind of processor
+used by an L<Ix::App::JMAP>) easy to write. It automatically adds method
+handlers for the standard JMAP methods (/get, /set, /changes, and maybe /query
+and /queryChanges) which are built from your L<Ix::DBIC::Result> classes. See
+the documentation there for more details.
+
+=cut
+
+=method handler_for($method_name)
+
+Implementations are required to implement this. It gets passed a method name
+(like 'Core/echo') and must return a coderef, which is later called with the
+parameters C<$self>, an C<Ix::Context> object, and the method's arguments as a
+hashref. Note that you do I<not> need to provide special handling for the
+standard JMAP methods for L<Ix::DBIC::Result> classes; see the overview for
+more details.
+
+=cut
 
 requires 'handler_for';
 
@@ -108,6 +130,15 @@ sub _sanity_check_calls ($self, $calls, $arg) {
   return;
 }
 
+=method expand_backrefs($ctx, $arg, $meta = {})
+
+This method is used internally to expand JMAP result references. The context
+object keeps a list of results accumulated so far, so that this method can
+search through them and resolve the ResultReference object into something we
+can actually call.
+
+=cut
+
 sub expand_backrefs ($self, $ctx, $arg, $meta_arg = {}) {
   return unless my @backref_keys = map  {; s/^#// ? $_ : () } keys %$arg;
 
@@ -171,6 +202,19 @@ sub expand_backrefs ($self, $ctx, $arg, $meta_arg = {}) {
 
   return;
 }
+
+=method handle_calls($ctx, $calls, $arg = {})
+
+This is the where the main work of the processor happens. It checks the
+arguments for well-formedness, calls C<optimize_calls>, then begins
+processing. To do so, it walks the list of C<$calls>, calling C<handler_for>
+to get each method name, expands backrefs as necessary, then calls the handler
+to process each call individually.  The handlers return L<Ix::Result> objects,
+which are accumulated by an C<Ix::JMAP::SentenceCollection> object. When all
+of the calls have been processed, this checks for and reports any errors, then
+returns the sentence collection.
+
+=cut
 
 sub handle_calls ($self, $ctx, $calls, $arg = {}) {
   $self->_sanity_check_calls($calls, {
@@ -280,7 +324,22 @@ sub handle_calls ($self, $ctx, $calls, $arg = {}) {
   return $sc;
 }
 
+=method optimize_calls($ctx, $calls)
+
+By default this is a no-op; this is called before actually processing any of
+the method calls. Implementations may modify C<$calls> in-place, if they want
+to muck about with anything to make processing faster.
+
+=cut
+
 sub optimize_calls {}
+
+=method process_request($ctx, $calls)
+
+This is a wrapper around C<handle_calls> that returns its results as a set of
+triples (i.e., an arrayref) rather than as a sentence collection.
+
+=cut
 
 sub process_request ($self, $ctx, $calls) {
   my $sc = $self->handle_calls($ctx, $calls);
