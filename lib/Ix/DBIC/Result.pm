@@ -526,11 +526,13 @@ A check method called before Foo/changes operations.
 
 =method ix_query_check($ctx, \%arg, \%search)
 
-A check method called before Foo/query operations.
+A check method called before Foo/query operations. (You must define this method
+if C<ix_query_enabled> is true for your rclass.)
 
 =method ix_query_changes_check($ctx, \%arg, \%search)
 
-A check method called before Foo/queryChanges operations.
+A check method called before Foo/queryChanges operations. (You must define this method
+if C<ix_query_enabled> is true for your rclass.)
 
 =cut
 
@@ -599,6 +601,74 @@ sub ix_postprocess_destroy { } # ($self, $ctx, \@row_ids)
 # I am not going to document this publicly, but its signature is
 # ($self, $ctx, $get_arg, $results)
 sub _return_ix_get   { return $_[3]->@* }
+
+# Methods without base implementations below
+
+=method ix_query_filter_map
+
+Required for query-enabled rclasses. This should return a hashref that defines
+how your rclass behaves when filtering. Its keys are properties that are valid
+for filtering, and its values are hashrefs defining the filter.
+
+Say your method returned the following hashref:
+
+    {
+      batch => { required => 1 },
+      types => {
+        cond_builder => sub ($types) {
+          return { type => $types },
+        },
+        differ => sub ($entity, $filter) {
+          # This difffers if its type is not in filter list
+          my $found = first { ! differ($entity->type, $_) } @$filter;
+
+          return $found ? 0 : 1;
+        },
+      },
+    }
+
+This means that your rclass would allow the keys 'batch' and 'types' for
+filtering. You can provide a C<required> key to require a particular filter. If
+C<cond_builder> is provided, its return value is used to pass into a DBIC
+C<search> argument. If you don't provide C<cond_builder> (as we do here with
+'batch'), the search will use simple string equality.
+
+Finally, you can provide a C<differ> key that controls the way elements are
+compared in ix_query_changes. If you don't provide one, C<differ()> from
+L<Ix::Util> is used. If you do provide one, it should be a coderef, which is
+passed the database entity and the relevant argument from the client-provided
+filter
+
+=method ix_query_sort_map
+
+Required for query-enabled rclasses. This should return a hashref that defines
+how your rclass sorts when filtering. Its keys are properties that are valid for
+sorting, and its values are hashrefs defining each sort.
+
+Say your method returned the following hashref:
+
+  {
+    created     => { },
+    layer_count => { },
+    type        => { sort_by => \"
+      CASE me.type
+        WHEN 'chocolate' THEN 1
+        WHEN 'marble'    THEN 2
+        ELSE                  3
+      END
+    "},
+  }
+
+This means that your rclass would allow the keys 'created', 'layer_count', and
+'type' for filtering. If you do not provide a C<sort_by> key, sorting is done by
+whatever means the database chooses. If you do provide one, it's passed into the
+C<order_by> attribute to a DBIC C<search> method.
+
+=method ix_query_joins
+
+For query-enabled rclasses, an optional list of tables to join for querying.
+If provided, this should return a list. (Its return value is eventually passed
+in the C<join> attribute to a DBIC C<search> method.)
 
 =method ix_update_state_string_field
 
