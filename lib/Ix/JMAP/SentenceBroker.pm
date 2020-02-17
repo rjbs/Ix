@@ -15,7 +15,8 @@ use JSON::Typist;
 =head1 OVERVIEW
 
 This is an implementation of L<JMAP::Tester::Role::SentenceBroker>.
-Nothing much uses it, but you can if you like.
+It's used internally by L<Ix::Processor::JMAP>, via
+L<Ix::JMAP::SentenceCollection>.
 
 =method client_ids_for_items($items)
 
@@ -45,7 +46,7 @@ sub sentence_for_item ($self, $item) {
   });
 }
 
-=method paragraph_for_item($items)
+=method paragraph_for_items($items)
 
 Given a set of JMAP method responses, return a new
 L<JMAP::Tester::Response::Paragraph> for it.

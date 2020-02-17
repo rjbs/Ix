@@ -96,7 +96,6 @@ has access_log_enabled => (
   default => 0,
 );
 
-
 has access_log_fh => (
   is => 'rw',
   isa => 'FileHandle',
@@ -247,6 +246,10 @@ sub to_app ($self) {
 }
 
 =method log_access($request, $response, $ctx = undef)
+
+This simply calls C<build_access_log_entry> to generate a log entry, then
+C<emit_access_log> to write it to C<access_log_fh>. This method does not,
+itself, check if access logging is enabled; callers should do so themselves.
 
 =cut
 

@@ -93,7 +93,13 @@ sub ix_extra_get_args { }
 
 =method ix_account_base
 
-This must return true if this rclass represents a new 'account'.
+This must return true if this rclass represents a new 'account': that is, if
+it is the source for new accountIds for an account type.
+
+For example: say your application might have several rclasses: User, Cookie,
+and Cake. Cookies and Cakes belong to Users; the accountId field of the Cookie
+and Cake tables point to a User's id. In this case, C<ix_account_base> should
+return true for the User rclass, and false for the Cookie and Cake rclasses.
 
 =cut
 
@@ -153,7 +159,7 @@ sub ix_client_update_ok_properties ($self, $ctx) {
 This returns a list of all the property names allowed to be initialized by C<$ctx>.
 For normal contexts, this includes all properties defined as
 C<client_may_init>, minus any virtual or immutable properties. System contexts
-may always instantiate properties.
+may always initialize properties.
 
 =cut
 
@@ -172,7 +178,7 @@ sub ix_client_init_ok_properties ($self, $ctx) {
 =method ix_default_properties
 
 Rclasses can override this to define default properties. It should return a
-hashref of C<< property_name => 'value' >>.
+hashref of C<< property_name => 'value' >> pairs.
 
 =cut
 
@@ -269,7 +275,8 @@ This code adds four properties to our rclass:
 =for :list
 1. batch - an integer, not updateable or initializable by the client
 2. baked_at - an optional timestamp
-3. stale_date - a virtual property; no database column is added
+3. stale_date - a virtual property; no database column is added, and is
+   computed each time it's requested by the client
 4. batch_size - an optional integer, which must be between 0 and 100.
 
 C<data_type> defines the type of the column, and also provides automatic
@@ -279,7 +286,7 @@ Postgres types and which validator they use:
 =for :list
 
 * string - text, validated with C<simplestr>
-* istring - citext, validated with C<simplestr>,
+* istring - citext, validated with C<simplestr> (searched case insensitively)
 * timestamptz - timestamptz, not validated by Ix
 * string[] - text[], not currently validated by Ix
 * boolean - boolean, validated with C<boolean>
@@ -298,7 +305,7 @@ Other keys you might use in a column definition include:
 
 =method ix_property_info
 
-This returns a hashref the saved property information for the rclass.
+This returns a hashref of the saved property information for the rclass.
 
 =cut
 
@@ -489,7 +496,9 @@ C<< $ctx->error >>). This is especially useful for doing authorization checks.
 
 The methods are passed any error, and expected to return a pair
 C<($row, $error)>. They are useful for modifying the result of an error, or for
-ignoring errors entirely.
+ignoring errors entirely. You can return a row to ignore the error, return a
+different error to modify it, or return the empty list to allow error handling
+to continue as normal.
 
 = transactional hook methods (C<ix_created>, C<ix_updated>, C<ix_destroyed>)
 
@@ -604,6 +613,30 @@ sub _return_ix_get   { return $_[3]->@* }
 
 # Methods without base implementations below
 
+=method ix_published_method_map
+
+This method provides a way to add additional JMAP handlers to your rclasses
+(in addition to the standard /get, /set, etc. handlers). If provided, it should
+return a hashref of C<< $jmap_name => $subroutine_name >> pairs. The
+subroutines are called with a context object and any arguments to the
+JMAP method call.
+
+For example:
+
+    package MyApp::Schema::Result::Cookie;
+    use base qw/DBIx::Class::Core/;
+    __PACKAGE__->load_components(qw/+Ix::DBIC::Result/);
+
+    # register 'Cookie/bake' as a publicly accessible JMAP method, implemented
+    # by the method cookie_bake
+    sub published_method_map {
+      return {
+        'Cookie/bake' => 'cookie_bake',
+      };
+    }
+
+    sub cookie_bake ($self, $ctx, $arg) { ... }
+
 =method ix_query_filter_map
 
 Required for query-enabled rclasses. This should return a hashref that defines
@@ -637,7 +670,8 @@ Finally, you can provide a C<differ> key that controls the way elements are
 compared in ix_query_changes. If you don't provide one, C<differ()> from
 L<Ix::Util> is used. If you do provide one, it should be a coderef, which is
 passed the database entity and the relevant argument from the client-provided
-filter
+filter. It should return true if the two values differ (by some arbitrary
+definition), and false if they should be considered equivalent.
 
 =method ix_query_sort_map
 

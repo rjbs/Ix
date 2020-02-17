@@ -126,7 +126,7 @@ An alias for C<< string({ nonempty => 1 }) >>.
 
 =func freetext()
 
-An alias for C<< string() >>.
+An alias for C<< string() >>; may be multiline.
 
 =cut
 
@@ -404,7 +404,8 @@ sub state ($min = -2**31, $max = 2**31-1) {
 
 =func idstr
 
-The given value must be a GUID string (case-insensitive).
+The given value must be a valid id string. For now this means any GUID string
+(case-insensitive), but may change in the future.
 
 =cut
 

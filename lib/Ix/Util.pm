@@ -23,7 +23,7 @@ use Sub::Exporter -setup => {
 =head1 OVERVIEW
 
 This module exports (via L<Sub::Exporter>) a bunch of utility methods. More
-interestingly, It also includes C<Ix::DateTime>.
+interestingly, it also includes C<Ix::DateTime>.
 
 =head2 Ix::DateTime
 
@@ -77,7 +77,7 @@ sub parsepgdate ($str) {
 
 Given a JMAP date (like "2017-09-12T12:34:56Z"), returns an C<Ix::DateTime>
 object. This is parsed with L<DateTime::Format::RFC3339>, but the time must be
-in Zulu time with no fractional eseconds.
+in Zulu time with no fractional seconds.
 
 =cut
 

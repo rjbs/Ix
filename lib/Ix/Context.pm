@@ -178,7 +178,8 @@ sub results_so_far ($self) {
 
 =method handle_calls($calls, $arg)
 
-A wrapper around the processor's C<handle_calls>. Returns a SentenceCollection.
+A wrapper around the processor's C<handle_calls>. Returns an
+L<Ix::JMAP::SentenceCollection>.
 
 =cut
 

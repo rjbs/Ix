@@ -1,7 +1,7 @@
 use 5.20.0;
 use warnings;
 package Ix::StateComparison;
-# ABSTRACT: a tiny class for copmaring states
+# ABSTRACT: a tiny class for comparing states
 
 use experimental qw(signatures postderef);
 

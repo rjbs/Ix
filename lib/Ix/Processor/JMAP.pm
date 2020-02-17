@@ -29,12 +29,56 @@ the documentation there for more details.
 
 =method handler_for($method_name)
 
-Implementations are required to implement this. It gets passed a method name
-(like 'Core/echo') and must return a coderef, which is later called with the
-parameters C<$self>, an C<Ix::Context> object, and the method's arguments as a
-hashref. Note that you do I<not> need to provide special handling for the
-standard JMAP methods for L<Ix::DBIC::Result> classes; see the overview for
-more details.
+Implementations are required to provide this method, but it can be a stub.
+This method is passed a JMAP method name (like 'Core/echo') and should return
+either undef or a coderef, which is later called with the parameters C<$self>, an
+C<Ix::Context> object, and the method's arguments as a hashref.
+
+If your C<handler_for> method returns undef, the processor will look first for
+handlers in your C<Ix::DBIC::Result> classes' C<ix_published_method_map>
+methods, and then for its standard JMAP handlers (/get, /set, /changes, and
+maybe /query and /queryChanges).
+
+Take, for example the following rclass:
+
+    package MyApp::Schema::Result::Cookie;
+    use base qw/DBIx::Class::Core/;
+    __PACKAGE__->load_components(qw/+Ix::DBIC::Result/);
+
+    sub ix_query_enabled { 0 }
+
+    sub published_method_map {
+      return { 'Cookie/bake' => 'cookie_bake' };
+    }
+
+If your JMAP processor provides only a stub C<handler_for>, you will
+automatically get handlers for Cookie/bake (provided by the rclass itself),
+plus Cookie/get, Cookie/set, and Cookie/changes (provided by this role). If
+your rclass was C<ix_query_enabled>, you would also get Cookie/query and
+Cookie/queryChanges.
+
+You can provide a more extensive C<handler_for inside your processor to enable
+JMAP methods I<not> implemented by C<Ix::DBIC::Result> rclasses. This processor
+handles the methods 'Spline/reticulate' and 'Flux/capacitate' in addition to
+all of the methods defined by its rclasses:
+
+    package MyApp::JMAP::Processor;
+    use Moose;
+    with 'Ix::Processor::JMAP';
+
+    my %other_handlers = (
+      'Spline/reticulate' => sub ($self, $ctx, $arg) {
+        return $ctx->result('Spline/reticulate', { reticulationCount => 42 });
+      },
+
+      'Flux/capacitate' => sub ($self, $ctx, $arg) {
+        return $ctx->error('forbidden', { reason => 'if you have to ask' });
+      }
+    );
+
+    sub handler_for ($self, $name) {
+      return $other_handlers{$name};
+    }
 
 =cut
 

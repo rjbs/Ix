@@ -7,31 +7,15 @@ use parent 'DBIx::Class';
 
 use experimental qw(signatures postderef);
 
-=head1 SYNOPSIS
-
-    package MyApp::Schema::Result::Foo;
-    use base qw/DBIx::Class::Core/;
-
-    __PACKAGE__->load_components(qw/+Ix::DBIC::AccountResult/);
-
-    __PACKAGE__->add_columns(
-      id        => { data_type => 'uuid' },
-      accountId => { data_type => 'uuid' },
-      ...
-    );
-
-    # Elsewhere...
-    package MyApp::Some::Other::Package;
-
-    my $rs  = $ctx->account_rs('Foo')->search(...);
-    my $all = $ctx->account_rs_including_inactive('Foo')->search(...);
-
-Mostly these methods are called via an L<Ix::Context::WithAccount> object.
-
-=head1 DESCRIPTION
+=head1 OVERVIEW
 
 We wrote this component after forgetting one too many times to include
-C<accountId> and C<isActive> in a DBIC search, which led to one very visible bug.
+C<accountId> and C<isActive> in a DBIC search, which led to one very visible
+bug. Mostly these methods are called via an L<Ix::Context::WithAccount>
+object, and you should probably only use this component directly if you are
+writing an accountId-bound component that does I<not> use L<Ix::DBIC::Result>,
+for some reason.
+
 This component provides two methods, C<account_rs> and
 C<account_rs_including_inactive>, which automatically add C<< $self->accountId >>.
 If the resultset is an L<Ix::DBIC::Result>, the first also adds
