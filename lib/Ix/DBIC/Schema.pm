@@ -1,10 +1,37 @@
 use 5.20.0;
 use warnings;
 package Ix::DBIC::Schema;
+# ABSTRACT: a DBIx::Class schema extension for Ix
 
 use parent 'DBIx::Class';
 
 use experimental qw(signatures postderef);
+
+=head1 SYNOPSIS
+
+This package contains methods to add to your DBIC schema to make Ix aware of
+them. Use it like this:
+
+    package MyApp::Schema;
+    use base qw/DBIx::Class::Schema/;
+
+    __PACKAGE__->load_components(qw/+Ix::DBIC::Schema/);
+
+    __PACKAGE__->load_namespaces(
+      default_resultset_class => '+Ix::DBIC::ResultSet',
+    );
+
+    __PACKAGE__->ix_finalize;
+
+
+=method ix_finalize
+
+You must call this at the end of your schema, so that Ix can load up all of
+the necessary result classes, do error checking, and set up its internal
+state. The method here simply calls C<ix_finalize> on all of the loaded result
+classes.
+
+=cut
 
 sub ix_finalize ($self) {
   my $source_reg = $self->source_registrations;
@@ -14,8 +41,15 @@ sub ix_finalize ($self) {
   }
 }
 
-# Allow rclasses to define custom sql (for special indexes,
-# functions, etc...)
+=method deployment_statements
+
+Any result class can contain a method called
+C<ix_extra_deployment_statements>; if it does, that SQL is run when the schema
+is deployed. This allows you to add custom SQL per rclass, which is especially
+useful for indexes, but can be used for anything you like.
+
+=cut
+
 sub deployment_statements {
   my $self = shift;
 
@@ -31,6 +65,13 @@ sub deployment_statements {
   );
 }
 
+=method deploy
+
+This simply delegates to L<DBIx::Class::Schema>'s C<deploy> method. You might
+override it if you want to do something different for deploying your schema.
+
+=cut
+
 sub deploy {
   my ($self) = shift;
   $self->storage->dbh_do(sub {
@@ -41,6 +82,23 @@ sub deploy {
   });
   $self->DBIx::Class::Schema::deploy(@_)
 }
+
+=method global_rs($rs_name)
+
+=method global_rs_including_inactive($rs_name)
+
+These methods are the counterparts to C<account_rs> and
+C<account_rs_including_inactive> from L<Ix::DBIC::AccountResult>. They are
+wrappers around C<< $schema->resultset($rs_name) >>, but do not include any
+accountId by default.
+
+They are most often called via an L<Ix::Context> object: using these methods
+makes it very obvious when you intend to search the database L<across>
+accounts: C<< $ctx->global_rs('Foo') >> and C<< $ctx->account_rs('Foo') >>
+makes clear which is which and helps to prevent silly bugs that can occur if
+you just use C<resultset> directly.
+
+=cut
 
 sub global_rs ($self, $rs_name) {
   my $rs = $self->resultset($rs_name);

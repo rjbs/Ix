@@ -1,5 +1,6 @@
 use 5.20.0;
 package Ix::Error;
+# ABSTRACT: a throwable, failed Ix::Result
 
 use Moose::Role;
 use experimental qw(signatures postderef);
@@ -7,6 +8,30 @@ use experimental qw(signatures postderef);
 with 'Ix::Result', 'Throwable';
 
 use namespace::autoclean;
+
+=head1 OVERVIEW
+
+This is a Moose role that represents a failed L<Ix::Result>, with a result
+type C<error>. Implementations are required to implement C<error_type>. This
+package include two implementations.
+
+=head2 Ix::Error::Internal
+
+This kind of error is thrown by C<Ix::App> when it catches an exception.  It's
+designed so that it shows no useful information to the client: if an internal
+error has happened, there's no telling what might be in C<$@>, so we don't
+want to pass that on. Instead, we return a JMAP error with type
+C<internalError> and a C<guid>, so that you can look up the report that's been
+filed out-of-band.  An internal error object has two other useful methods on it:
+C<error_ident> and C<report_guid>.
+
+=head2 Ix::Error::Generic
+
+This is an error that's suitable to throw for run-of-the mill JMAP errors
+(invalidArguments, unknownMethod, etc.). They have a few useful methods:
+C<report_guid>, C<properties>, and C<error_type>.
+
+=cut
 
 sub result_type { 'error' }
 

@@ -1,5 +1,6 @@
 use v5.24.0;
 package Ix::JMAP::SentenceBroker;
+# ABSTRACT: an object to get some sentences
 
 use Moose;
 
@@ -11,9 +12,29 @@ use JMAP::Tester::Response::Sentence;
 use JMAP::Tester::Response::Paragraph;
 use JSON::Typist;
 
+=head1 OVERVIEW
+
+This is an implementation of L<JMAP::Tester::Role::SentenceBroker>.
+It's used internally by L<Ix::Processor::JMAP>, via
+L<Ix::JMAP::SentenceCollection>.
+
+=method client_ids_for_items($items)
+
+Given a bunch of JMAP requests or responses, returns a list of their client
+ids.
+
+=cut
+
 sub client_ids_for_items ($self, $items) {
   map {; $_->[1] } @$items
 }
+
+=method sentence_for_item($item)
+
+Given a single JMAP method response, return a new
+L<JMAP::Tester::Response::Sentence> for it.
+
+=cut
 
 sub sentence_for_item ($self, $item) {
   JMAP::Tester::Response::Sentence->new({
@@ -25,6 +46,13 @@ sub sentence_for_item ($self, $item) {
   });
 }
 
+=method paragraph_for_items($items)
+
+Given a set of JMAP method responses, return a new
+L<JMAP::Tester::Response::Paragraph> for it.
+
+=cut
+
 sub paragraph_for_items {
   my ($self, $items) = @_;
 
@@ -35,7 +63,19 @@ sub paragraph_for_items {
   });
 }
 
+=method abort_callback
+
+This method will die if called.
+
+=cut
+
 sub abort_callback       { sub { ... } };
+
+=method strip_json_types
+
+Strip a reference of L<JSON::Typist> objects.
+
+=cut
 
 sub strip_json_types {
   state $typist = JSON::Typist->new;
@@ -45,3 +85,8 @@ sub strip_json_types {
 no Moose;
 
 1;
+
+=head1 SEE ALSO
+
+=for :list
+* L<JMAP::Tester>

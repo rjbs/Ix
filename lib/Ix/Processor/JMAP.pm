@@ -1,5 +1,6 @@
 use 5.20.0;
 package Ix::Processor::JMAP;
+# ABSTRACT: do stuff with JMAP requests
 
 use Moose::Role;
 use experimental qw(lexical_subs signatures postderef);
@@ -15,6 +16,71 @@ use namespace::autoclean;
 use Ix::JMAP::SentenceCollection;
 
 with 'Ix::Processor';
+
+=head1 OVERVIEW
+
+This is a Moose role designed to make JMAP processors (the kind of processor
+used by an L<Ix::App::JMAP>) easy to write. It automatically adds method
+handlers for the standard JMAP methods (/get, /set, /changes, and maybe /query
+and /queryChanges) which are built from your L<Ix::DBIC::Result> classes. See
+the documentation there for more details.
+
+=cut
+
+=method handler_for($method_name)
+
+Implementations are required to provide this method, but it can be a stub.
+This method is passed a JMAP method name (like 'Core/echo') and should return
+either undef or a coderef, which is later called with the parameters C<$self>, an
+C<Ix::Context> object, and the method's arguments as a hashref.
+
+If your C<handler_for> method returns undef, the processor will look first for
+handlers in your C<Ix::DBIC::Result> classes' C<ix_published_method_map>
+methods, and then for its standard JMAP handlers (/get, /set, /changes, and
+maybe /query and /queryChanges).
+
+Take, for example the following rclass:
+
+    package MyApp::Schema::Result::Cookie;
+    use base qw/DBIx::Class::Core/;
+    __PACKAGE__->load_components(qw/+Ix::DBIC::Result/);
+
+    sub ix_query_enabled { 0 }
+
+    sub published_method_map {
+      return { 'Cookie/bake' => 'cookie_bake' };
+    }
+
+If your JMAP processor provides only a stub C<handler_for>, you will
+automatically get handlers for Cookie/bake (provided by the rclass itself),
+plus Cookie/get, Cookie/set, and Cookie/changes (provided by this role). If
+your rclass was C<ix_query_enabled>, you would also get Cookie/query and
+Cookie/queryChanges.
+
+You can provide a more extensive C<handler_for inside your processor to enable
+JMAP methods I<not> implemented by C<Ix::DBIC::Result> rclasses. This processor
+handles the methods 'Spline/reticulate' and 'Flux/capacitate' in addition to
+all of the methods defined by its rclasses:
+
+    package MyApp::JMAP::Processor;
+    use Moose;
+    with 'Ix::Processor::JMAP';
+
+    my %other_handlers = (
+      'Spline/reticulate' => sub ($self, $ctx, $arg) {
+        return $ctx->result('Spline/reticulate', { reticulationCount => 42 });
+      },
+
+      'Flux/capacitate' => sub ($self, $ctx, $arg) {
+        return $ctx->error('forbidden', { reason => 'if you have to ask' });
+      }
+    );
+
+    sub handler_for ($self, $name) {
+      return $other_handlers{$name};
+    }
+
+=cut
 
 requires 'handler_for';
 
@@ -108,6 +174,15 @@ sub _sanity_check_calls ($self, $calls, $arg) {
   return;
 }
 
+=method expand_backrefs($ctx, $arg, $meta = {})
+
+This method is used internally to expand JMAP result references. The context
+object keeps a list of results accumulated so far, so that this method can
+search through them and resolve the ResultReference object into something we
+can actually call.
+
+=cut
+
 sub expand_backrefs ($self, $ctx, $arg, $meta_arg = {}) {
   return unless my @backref_keys = map  {; s/^#// ? $_ : () } keys %$arg;
 
@@ -171,6 +246,19 @@ sub expand_backrefs ($self, $ctx, $arg, $meta_arg = {}) {
 
   return;
 }
+
+=method handle_calls($ctx, $calls, $arg = {})
+
+This is the where the main work of the processor happens. It checks the
+arguments for well-formedness, calls C<optimize_calls>, then begins
+processing. To do so, it walks the list of C<$calls>, calling C<handler_for>
+to get each method name, expands backrefs as necessary, then calls the handler
+to process each call individually.  The handlers return L<Ix::Result> objects,
+which are accumulated by an C<Ix::JMAP::SentenceCollection> object. When all
+of the calls have been processed, this checks for and reports any errors, then
+returns the sentence collection.
+
+=cut
 
 sub handle_calls ($self, $ctx, $calls, $arg = {}) {
   $self->_sanity_check_calls($calls, {
@@ -280,7 +368,22 @@ sub handle_calls ($self, $ctx, $calls, $arg = {}) {
   return $sc;
 }
 
+=method optimize_calls($ctx, $calls)
+
+By default this is a no-op; this is called before actually processing any of
+the method calls. Implementations may modify C<$calls> in-place, if they want
+to muck about with anything to make processing faster.
+
+=cut
+
 sub optimize_calls {}
+
+=method process_request($ctx, $calls)
+
+This is a wrapper around C<handle_calls> that returns its results as a set of
+triples (i.e., an arrayref) rather than as a sentence collection.
+
+=cut
 
 sub process_request ($self, $ctx, $calls) {
   my $sc = $self->handle_calls($ctx, $calls);

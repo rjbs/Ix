@@ -1,5 +1,6 @@
 use 5.20.0;
 package Ix::App;
+# ABSTRACT: stand up a PSGI application to handle requests from the world
 
 use Moose::Role;
 use experimental qw(signatures postderef);
@@ -17,6 +18,28 @@ use Plack::Middleware::ReverseProxy;
 
 use namespace::autoclean;
 
+=head1 SYNOPSIS
+
+Here's a tiny script suitable for running with L<plackup>.
+
+    package MyApp::App { with 'Ix::App' }
+    MyApp::App->new->to_app;
+
+=head1 OVERVIEW
+
+Ix::App is a Moose role for building PSGI applications. It receives requests,
+creates L<Ix::Context> objects from them, and then passes them off to the
+L<Ix::Processor> to handle them. It also handles a bunch of other low-level
+things like logging, basic error handling, etc.
+
+=attr json_codec
+
+Handles encoding and decoding of JSON. This provides delegates for
+C<encode_json> and C<decode_json>, so you can say C<< $app->decode_json >> if
+you like. Defaults to a L<JSON::MaybeXS> object.
+
+=cut
+
 has json_codec => (
   is => 'ro',
   default => sub {
@@ -27,6 +50,14 @@ has json_codec => (
     decode_json => 'decode',
   },
 );
+
+=attr logger_json_codec
+
+Just like the C<json_codec>, but used to serialize JSON for logging (the
+default includes C<canonical> for easier human reading). Provides two delegates,
+C<encode_json_log> and C<decode_json_log>.
+
+=cut
 
 has logger_json_codec => (
   is => 'ro',
@@ -39,10 +70,25 @@ has logger_json_codec => (
   },
 );
 
+=attr processor (required)
+
+An L<Ix::Processor>...the most important part of any Ix::App!
+
+=cut
+
 has processor => (
   is => 'ro',
   required => 1,
 );
+
+=attr access_log_enabled (default 0)
+
+=attr access_log_fh
+
+If access logging is enabled, the filehandle to which we'll log. Defaults to
+STDERR.
+
+=cut
 
 has access_log_enabled => (
   is => 'rw',
@@ -56,6 +102,10 @@ has access_log_fh => (
   default => sub { IO::Handle->new->fdopen(fileno(STDERR), "w") },
 );
 
+=attr transaction_log_enabled (default 0)
+
+=cut
+
 has transaction_log_enabled => (
   is  => 'rw',
   isa => 'Bool',
@@ -67,6 +117,18 @@ has _caches => (
   init_arg => undef,
   default  => sub {  []  },
 );
+
+=method to_app
+
+This is the most important method on an Ix::App; it returns a PSGI application
+(i.e., a coderef). It takes the environment, adds some information to it (an
+C<ix.transaction> key), calls C<context_from_plack_request> on the processor,
+caches the schema, then passes it off to C<_core_request> to do the actual
+processing. If fatal errors occur during processing, it reports the exception
+and returns 500.  Otherwise, it logs the result (if logging is enabled) and
+returns the response from the processor.
+
+=cut
 
 sub to_app ($self) {
   my %schema_cache;
@@ -183,11 +245,26 @@ sub to_app ($self) {
   return $app;
 }
 
+=method log_access($request, $response, $ctx = undef)
+
+This simply calls C<build_access_log_entry> to generate a log entry, then
+C<emit_access_log> to write it to C<access_log_fh>. This method does not,
+itself, check if access logging is enabled; callers should do so themselves.
+
+=cut
+
 sub log_access ($self, $req, $res, $ctx = undef) {
   my $entry = $self->build_access_log_entry($req, $res, $ctx);
 
   $self->emit_access_log($entry);
 }
+
+=method build_access_log_entry($request, $response, $ctx = undef)
+
+Called by C<log_access>. It pulls information out of the request and response,
+(and if provided, the context object) and returns a hashref of details to log.
+
+=cut
 
 sub build_access_log_entry ($self, $req, $res, $ctx = undef) {
   my %entry = map {
@@ -227,9 +304,28 @@ sub build_access_log_entry ($self, $req, $res, $ctx = undef) {
   return \%entry;
 }
 
+=method emit_access_log($entry)
+
+Called by C<log_access>. It takes the hashref returned by
+C<build_access_log_entry>, encodes it as JSON, and writes it out
+C<access_log_fh>.
+
+=cut
+
 sub emit_access_log ($self, $entry) {
   $self->access_log_fh->print( $self->encode_json_log($entry) . "\n" );
 }
+
+=method log_transaction($request, $response, $ctx = undef)
+
+=method build_transaction_log_entry($request, $response, $ctx = undef)
+
+=method emit_transaction_log($entry)
+
+These three methods are just like the access log variants, with the exception
+that the C<emit_transaction_log> stub provided here is a no-op.
+
+=cut
 
 sub log_transaction ($self, $req, $res, $ctx = undef) {
   my $entry = $self->build_transaction_log_entry($req, $res, $ctx);
