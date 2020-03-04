@@ -284,7 +284,6 @@ validation with L<Ix::Validator>. They're shown here with their corresponding
 Postgres types and which validator they use:
 
 =for :list
-
 * string - text, validated with C<simplestr>
 * istring - citext, validated with C<simplestr> (searched case insensitively)
 * timestamptz - timestamptz, not validated by Ix
