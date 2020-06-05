@@ -1176,7 +1176,7 @@ sub ix_query ($self, $ctx, $arg = {}) {
       position     => $arg->{position} // 0,
       ids          => [ map {; "" . $_->{id} } @items ],
 
-      canCalculateUpdates => \1,
+      canCalculateChanges => \1,
     });
 
     return @res;
