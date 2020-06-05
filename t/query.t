@@ -161,7 +161,7 @@ $state =~ s/-\d+//;
       'filter' => {
         'recipeId' => $secret1_recipe_id
       },
-      'canCalculateUpdates' => jtrue,
+      'canCalculateChanges' => jtrue,
       'position' => 0,
       'sort' => [
         { property => 'type', isAscending => jtrue },
@@ -198,7 +198,7 @@ $state =~ s/-\d+//;
       'filter' => {
         'recipeId' => $secret1_recipe_id
       },
-      'canCalculateUpdates' => jtrue,
+      'canCalculateChanges' => jtrue,
       'position' => 0,
       'sort' => [
         { property => 'type', isAscending => jfalse }
@@ -279,7 +279,7 @@ subtest "custom condition builder" => sub {
       'filter' => {
         'recipeId' => $secret1_recipe_id
       },
-      'canCalculateUpdates' => jtrue,
+      'canCalculateChanges' => jtrue,
       'position' => 0,
       'sort' => [
         { property => 'type',        isAscending => jtrue },
@@ -315,7 +315,7 @@ subtest "custom condition builder" => sub {
       'filter' => {
         'recipeId' => $secret1_recipe_id
       },
-      'canCalculateUpdates' => jtrue,
+      'canCalculateChanges' => jtrue,
       'position' => 0,
       'sort' => [
         { property => 'type',        isAscending => jtrue },
@@ -352,7 +352,7 @@ subtest "custom condition builder" => sub {
         'recipeId' => $secret1_recipe_id,
         'type'     => 'peanut butter',
       },
-      'canCalculateUpdates' => jtrue,
+      'canCalculateChanges' => jtrue,
       'position' => 0,
       'sort' => undef,
       'queryState' => $state,
@@ -390,7 +390,7 @@ subtest "custom condition builder" => sub {
         'filter' => {
           'recipeId' => $secret1_recipe_id
         },
-        'canCalculateUpdates' => jtrue,
+        'canCalculateChanges' => jtrue,
         'position' => $p-1,
         'sort' => [],
         'queryState' => $state,
@@ -431,7 +431,7 @@ subtest "custom condition builder" => sub {
         'recipeId' => $secret1_recipe_id,
         'type'     => 'peanut butter',
       },
-      'canCalculateUpdates' => jtrue,
+      'canCalculateChanges' => jtrue,
       'position' => 0,
       'sort' => undef,
       'queryState' => $state,
@@ -477,7 +477,7 @@ subtest "custom condition builder" => sub {
         'recipeId' => $secret1_recipe_id,
         'type'     => 'peanut butter',
       },
-      'canCalculateUpdates' => jtrue,
+      'canCalculateChanges' => jtrue,
       'position' => 0,
       'sort' => undef,
       'queryState' => $state,
@@ -586,7 +586,7 @@ subtest "custom condition builder" => sub {
       'filter' => {
         'recipeId' => $secret1_recipe_id
       },
-      'canCalculateUpdates' => jtrue,
+      'canCalculateChanges' => jtrue,
       'position' => 0,
       'sort' => [
         { property => 'type', isAscending => jtrue },
@@ -861,7 +861,7 @@ subtest "custom condition builder" => sub {
         'recipeId' => $secret1_recipe_id,
         'type'     => 'peanut butter',
       },
-      'canCalculateUpdates' => JSON::MaybeXS::JSON->true,
+      'canCalculateChanges' => JSON::MaybeXS::JSON->true,
       'position' => 0,
       'sort' => undef,
       'queryState' => $state,
@@ -912,7 +912,7 @@ subtest "custom condition builder" => sub {
         'recipeId' => $secret1_recipe_id,
         'type'     => 'peanut butter',
       },
-      'canCalculateUpdates' => JSON::MaybeXS::JSON->true,
+      'canCalculateChanges' => JSON::MaybeXS::JSON->true,
       'position' => 0,
       'sort' => undef,
       'queryState' => $state,
@@ -1098,7 +1098,7 @@ subtest "filters on joined tables" => sub {
           'recipe.is_delicious' => jtrue,
 
         },
-        'canCalculateUpdates' => jtrue,
+        'canCalculateChanges' => jtrue,
         'position' => 0,
         'sort'  => [{ property => 'type', isAscending => jtrue }],
         'queryState' => $state,
@@ -1170,7 +1170,7 @@ subtest "filters on joined tables" => sub {
           'recipeId' => $secret1_recipe_id,
           'recipe.is_delicious' => jfalse,
         },
-        'canCalculateUpdates' => jtrue,
+        'canCalculateChanges' => jtrue,
         'position' => 0,
         'sort' => [
           { property => 'type', isAscending => jtrue },
