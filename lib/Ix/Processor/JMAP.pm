@@ -57,7 +57,7 @@ plus Cookie/get, Cookie/set, and Cookie/changes (provided by this role). If
 your rclass was C<ix_query_enabled>, you would also get Cookie/query and
 Cookie/queryChanges.
 
-You can provide a more extensive C<handler_for inside your processor to enable
+You can provide a more extensive C<handler_for> inside your processor to enable
 JMAP methods I<not> implemented by C<Ix::DBIC::Result> rclasses. This processor
 handles the methods 'Spline/reticulate' and 'Flux/capacitate' in addition to
 all of the methods defined by its rclasses:
