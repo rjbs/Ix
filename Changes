@@ -1,6 +1,8 @@
 Revision history for Ix
 
 {{$NEXT}}
+
+0.004     2020-06-05 10:57:39-04:00 America/New_York
         - fix canCalculateChanges / canCalculateUpdates misnaming
         - add a ton of docs
 
