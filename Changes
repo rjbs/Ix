@@ -1,6 +1,8 @@
 Revision history for Ix
 
 {{$NEXT}}
+        - fix canCalculateChanges / canCalculateUpdates misnaming
+        - add a ton of docs
 
 0.003     2020-02-26 09:09:48-05:00 America/New_York
         - rename methods to match JMAP more closely
